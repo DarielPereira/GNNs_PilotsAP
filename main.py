@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy.linalg as alg
 import math
 from functionsSetup import *
+from functionsChannelEstimates import *
 
 ##Setting Parameters
 nbrOfSetups = 2                 # number of Monte-Carlo setups
@@ -47,7 +48,18 @@ for n in range(nbrOfSetups):
     gainOverNoisedB, R, pilotIndex, D, D_small = generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups=1, seed=2)
 
     # Generate channel realizations with estimates and estimation error matrices
-    
+    Hhat, H, B, C = channelEstimates(R, nbrOfRealizations, L, K, N, tau_p, pilotIndex, p)
+
+
+    # SE for cell-free massive MIMO
+    # AP-UE allocation matrix when all the APs serve all the UEs
+    D_all = np.ones((L, K))
+
+    #Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
+    functionComputeSE_uplink(Hhat, H, D_all, D_small, B, C, tau_c, tau_p, nbrOfRealizations, N, K, L, p, R, pilotIndex)
+
+
+
 
 
 

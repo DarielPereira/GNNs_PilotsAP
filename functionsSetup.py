@@ -20,23 +20,23 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups = 1, seed =
     :param seed: Seed number of pseudorandom number generator
 
     OUTPUT>
-    :param gainOverNoisedB: matrix with dimensions LxK where element (l,k) is the channel gain
+    gainOverNoisedB: matrix with dimensions LxK where element (l,k) is the channel gain
                             (normalized by noise variance) between AP l and UE k
-    :param R: matrix with dimensions NxNxLxK where matrix (:,:,l,k) is the spatial correlation
+    R: matrix with dimensions N x N x L x K where (:,:,l,k) is the spatial correlation
                             matrix between  AP l and UE k (normalized by noise variance)
-    :param pilotIndex: matrix with dimensions Kx1 containing the integer indexes of the pilots
+    pilotIndex: matrix with dimensions Kx1 containing the integer indexes of the pilots
                         assigned to the UEs
-    :param D: DCC matrix with dimensions LxK where the element (l,k) equals '1' if Ap l serves
+    D: DCC matrix with dimensions LxK where the element (l,k) equals '1' if Ap l serves
                         UE k, and '0' otherwise
-    :param D_small: DCC matrix with dimensions LxK where the element (l,k) equals '1' if Ap l serves
+    D_small: DCC matrix with dimensions LxK where the element (l,k) equals '1' if Ap l serves
                         UE k, and '0' otherwise (for small-cell setups)
-    :param APpositions: matrix of dimensions Lx1 containing the APs' locations as complex numbers,
+    APpositions: matrix of dimensions Lx1 containing the APs' locations as complex numbers,
                         where the real part is the horizontal position and the imaginary part is the
                         vertical position
-    :param UEpositions: matrix of dimensions Lx1 containing the UEs' locations as complex numbers,
+    UEpositions: matrix of dimensions Lx1 containing the UEs' locations as complex numbers,
                         where the real part is the horizontal position and the imaginary part is the
                         vertical position
-    :param distances: matrix of dimensions LxK where element (l,k) is the distance en meters between
+    distances: matrix of dimensions LxK where element (l,k) is the distance en meters between
                       Ap l and UE k
     """
 
@@ -60,7 +60,7 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups = 1, seed =
 
     # To save the results
     gainOverNoisedB = np.zeros((L, K))
-    R = np.zeros((L, K, N, N), dtype=complex)
+    R = np.zeros((N, N, L, K), dtype=complex)
     distances = np.zeros((L, K))
     pilotIndex = np.zeros((K))
     D = np.zeros((L, K))
@@ -102,6 +102,7 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups = 1, seed =
             newcolumn = np.array([])
 
         shadowing = meanvalues + stdvalue*np.random.rand(L)   # generate the shadow fading realizations
+                                                              # arreglar randn>rand
 
         # Compute the channel gain divided by noise power
         gainOverNoisedB[:, k] = constantTerm - alpha*np.log10(distances[:, k]) + shadowing - noiseVariancedBm
@@ -140,7 +141,7 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups = 1, seed =
 
             # Generate the approximate spatial correlation matrix using the local scattering model by scaling
             # the normalized matrices with the channel gain
-            R[l,k,:,:] = db2pow(gainOverNoisedB[l,k])*localScatteringR(N, angletoUE_varphi, ASD_varphi, antennaSpacing)
+            R[:, :, l, k] = db2pow(gainOverNoisedB[l, k])*localScatteringR(N, angletoUE_varphi, ASD_varphi, antennaSpacing)
 
 
     # Each AP serves the UE with the strongest channel condition on each of the pilots
@@ -171,9 +172,9 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups = 1, seed =
 def db2pow(dB):
     """return the power values that correspond to the input dB values
     INPUT>
-    :param db: dB input value
+    :param dB: dB input value
     OUTPUT
-    :param pow: power value
+    pow: power value
     """
     pow = 10**(dB/10)
     return pow
@@ -182,10 +183,11 @@ def localScatteringR(N, nominalAngle, ASD, antennaSpacing):
     """return the approximate spatial correlation matrix for the local scattering model
     INPUT>
     :param N: number of antennas at the AP
-    :param nominalAngledeg: nominal azimuth angle
+    :param nominalAngle: nominal azimuth angle
     :param ASD: angular standard deviation around the nominal azimuth angle in radians
+
     OUTPUT>
-    :param R: spatial correlation matrix
+    R: spatial correlation matrix
     """
 
     firstColumn = np.zeros((N), dtype=complex)
