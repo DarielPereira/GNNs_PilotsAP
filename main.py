@@ -4,6 +4,8 @@ import numpy.linalg as alg
 import math
 from functionsSetup import *
 from functionsChannelEstimates import *
+from functionsComputeSE_uplink import *
+
 
 ##Setting Parameters
 nbrOfSetups = 2                 # number of Monte-Carlo setups
@@ -56,7 +58,11 @@ for n in range(nbrOfSetups):
     D_all = np.ones((L, K))
 
     #Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
-    functionComputeSE_uplink(Hhat, H, D_all, D_small, B, C, tau_c, tau_p, nbrOfRealizations, N, K, L, p, R, pilotIndex)
+    SE_MMSE_all, SE_P_MMSE_all, SE_P_RZF_all, SE_MR_cent_all, SE_opt_L_MMSE_all, SE_nopt_LP_MMSE_all, \
+    SE_nopt_MR_all, SE_L_MMSE_all, SE_LP_MMSE_all, SE_MR_dist_all, Gen_SE_P_MMSE_all, Gen_SE_P_RZF_all, \
+    Gen_SE_LP_MMSE_all, Gen_SE_MR_dist_all, SE_small_MMSE_all, Gen_SE_small_MMSE_all \
+        = functionComputeSE_uplink(Hhat, H, D_all, D_small, B, C, tau_c, tau_p,
+                                   nbrOfRealizations, N, K, L, p, R, pilotIndex)
 
 
 

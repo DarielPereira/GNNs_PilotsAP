@@ -24,8 +24,7 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups = 1, seed =
                             (normalized by noise variance) between AP l and UE k
     R: matrix with dimensions N x N x L x K where (:,:,l,k) is the spatial correlation
                             matrix between  AP l and UE k (normalized by noise variance)
-    pilotIndex: matrix with dimensions Kx1 containing the integer indexes of the pilots
-                        assigned to the UEs
+    pilotIndex:
     D: DCC matrix with dimensions LxK where the element (l,k) equals '1' if Ap l serves
                         UE k, and '0' otherwise
     D_small: DCC matrix with dimensions LxK where the element (l,k) equals '1' if Ap l serves
