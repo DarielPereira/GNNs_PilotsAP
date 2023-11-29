@@ -100,7 +100,7 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups = 1, seed =
             stdvalue = sigma_sf
             newcolumn = np.array([])
 
-        shadowing = meanvalues + stdvalue*np.random.rand(L)   # generate the shadow fading realizations
+        shadowing = meanvalues + stdvalue*np.random.randn(L)   # generate the shadow fading realizations
                                                               # arreglar randn>rand
 
         # Compute the channel gain divided by noise power
