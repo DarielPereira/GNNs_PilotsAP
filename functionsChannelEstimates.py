@@ -31,6 +31,9 @@ def channelEstimates(R, nbrOfRealizations, L, K, N, tau_p, pilotIndex, p):
                     error between AP l and UE k (normalized by noise variance)
     """
 
+    # set random seed
+    np.random.seed(0)
+
     # Generate uncorrelated Rayleigh fading channel realizations
     H = np.random.randn(L*N, nbrOfRealizations, K) + 1j*np.random.randn(L*N, nbrOfRealizations, K)
 
