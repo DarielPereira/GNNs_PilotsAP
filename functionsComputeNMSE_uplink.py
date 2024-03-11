@@ -5,7 +5,7 @@ import scipy.linalg as spalg
 import matplotlib.pyplot as plt
 import random
 
-def functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex):
+def functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex,):
     """ Compute the NMSE for evey user according to equation (4.21).
     Pilot transmitting power is assumed equal for all the UEs
 
@@ -20,6 +20,7 @@ def functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex):
                             matrix between  AP l and UE k (normalized by noise variance)
     :param pilotIndex: matrix with dimensions Kx1 containing the integer indexes of the pilots
                             assigned to the UEs
+
 
     OUTPUT>
     system_NMSE: sum of the NMSE values of all UEs
@@ -59,12 +60,20 @@ def functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex):
         UEs_NMSE[k] = 1 - (sum([tau_p*p*np.trace(R[:, :, l, k]@Psi[:, :, l, t_k]@R[:, :, l, k]) for l in serving_APs])/
                                 sum([np.trace(R[:, :, l, k]) for l in serving_APs])).real
 
+    # sum of NMSE of all UEs
     system_NMSE = np.sum(UEs_NMSE)
-    print(f'System NMSE = {system_NMSE}')
 
-    average_NMSE = system_NMSE / K
-    print(f'Average NMSE = {average_NMSE}')
+    # to store the NMSE of the worst user in each pilot
+    worst_userXpilot = np.zeros(tau_p)
+    # to store the NMSE of the best user in each pilot
+    best_userXpilot = np.zeros(tau_p)
 
-    print('NMSE values of all UEs = {}'.format(UEs_NMSE))
+    for t in range(tau_p):
+        NMSE_pilotSharing_UEs = UEs_NMSE[pilotIndex[:] == t]
+        if len(NMSE_pilotSharing_UEs) > 0:
+            worst_userXpilot[t] = max(UEs_NMSE[pilotIndex[:] == t])
+            best_userXpilot[t] = min(UEs_NMSE[pilotIndex[:] == t])
 
-    return system_NMSE, UEs_NMSE, average_NMSE
+    print('average worst: {}'.format(sum(worst_userXpilot)/tau_p))
+
+    return system_NMSE, UEs_NMSE, worst_userXpilot, best_userXpilot

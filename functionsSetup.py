@@ -4,12 +4,13 @@ import sympy as sp
 import scipy.linalg as spalg
 import matplotlib.pyplot as plt
 import random
+import math
 
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 
-def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups, pilot_alloc_mode, seed = 2):
+def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups, pilot_alloc_mode, seed = 1):
     """Generates realizations of the setup
     INPUT>
     :param L: Number of APs per setup
@@ -21,7 +22,9 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups, pilot_allo
     :param ASD_theta: Angular standard deviation in the local scattering model
                        for the elevation angle (in radians)
     :param nbrOfSetups: Number of setups with random UE and AP locations
+    :param pilot_alloc_mode: Pilot allocation mode
     :param seed: Seed number of pseudorandom number generator
+
 
     OUTPUT>
     gainOverNoisedB: matrix with dimensions LxK where element (l,k) is the channel gain
@@ -73,14 +76,16 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups, pilot_allo
     APpositions = np.zeros((L, 1))
     UEpositions = np.zeros((K, 1), dtype=complex)
 
-    APpositions = (np.random.rand(L,1) + 1j*np.random.rand(L,1))*squarelength     # random AP locations with uniform distribution
+    # APpositions = (np.random.rand(L, 1) + 1j*np.random.rand(L, 1))*squarelength     # random AP locations with uniform distribution
+    # for this test we use fixed centered AP
+    APpositions = np.array([[500 + 500j]], dtype=complex)
 
     # To save the shadowing correlation matrices
     shadowCorrMatrix = sigma_sf**2*np.ones((K, K))
     shadowAPrealizations = np.zeros((K, L))
 
     # # fixed UE positions (for test)
-    # _UEpositions = [200+200j, 205+200j, 500+500j, 600+300j]
+    # _UEpositions = [200+200j, 204+208j, 500+800j, 700+800j, 100+100j]
 
     # Add UEs
     for k in range(K):
@@ -93,16 +98,16 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups, pilot_allo
         distances[:, k] = np.sqrt(distanceVertical**2+np.abs(APpositions-UEposition)**2)[:, 0]
 
         if k > 0:         # if UE k is not the first UE
-            shortestDistances = np.zeros((k,1))
+            shortestDistances = np.zeros((k, 1))
 
             for i in range(k):
                 shortestDistances[i] = min(np.abs(UEposition-UEpositions[i]))
 
             # Compute conditional mean and standard deviation necessary to obtain the new shadow fading
             # realizations when the previous UEs' shadow fading realization have already been generated
-            newcolumn = (sigma_sf**2)*(2**(shortestDistances/-(decorr)))[:,0]
+            newcolumn = (sigma_sf**2)*(2**(shortestDistances/-(decorr)))[:, 0]
             term1 = newcolumn.conjugate().T@alg.inv(shadowCorrMatrix[:k, :k])
-            meanvalues = term1@shadowAPrealizations[:k,:]
+            meanvalues = term1@shadowAPrealizations[:k, :]
             stdvalue = np.sqrt(sigma_sf**2 - term1@newcolumn)
 
         else:           # if UE k is the first UE
@@ -114,7 +119,9 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups, pilot_allo
                                                               # arreglar randn>rand
 
         # Compute the channel gain divided by noise power
-        gainOverNoisedB[:, k] = constantTerm - alpha*np.log10(distances[:, k]) + shadowing - noiseVariancedBm
+        # gainOverNoisedB[:, k] = constantTerm - alpha * np.log10(distances[:, k]) - noiseVariancedBm
+        # In this test we eliminated the random contribution to the gain (shadowing)
+        gainOverNoisedB[:, k] = constantTerm - alpha * np.log10(distances[:, k]) + shadowing - noiseVariancedBm
 
         # Update shadowing correlation matrix and store realizations
         shadowCorrMatrix[0:k, k] = newcolumn
@@ -123,6 +130,10 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups, pilot_allo
 
         # store the UE position
         UEpositions[k] = UEposition
+
+    # setup map
+    drawPilotAssignment(UEpositions, APpositions, np.zeros(K, dtype=int), title="User allocation " + pilot_alloc_mode)
+
 
     # Compute correlation matrices
     for k in range(K):
@@ -135,39 +146,41 @@ def generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfSetups, pilot_allo
             # the normalized matrices with the channel gain
             R[:, :, l, k] = db2pow(gainOverNoisedB[l, k]) * localScatteringR(N, angletoUE_varphi, ASD_varphi,
                                                                              antennaSpacing)
+            # R[:, :, l, k] = localScatteringR(N, angletoUE_varphi, ASD_varphi, antennaSpacing)
 
     # Compute the pilot assignment. Modes = ['DCC', ]
-    pilotIndex = pilotAssignment(K, L, tau_p, APpositions, UEpositions, distances, gainOverNoisedB, R,
+    pilotIndex = pilotAssignment(K, L, N, tau_p, APpositions, UEpositions, distances, gainOverNoisedB, R,
                                  mode=pilot_alloc_mode)
 
-    # Each AP serves the UE with the strongest channel condition on each of the pilots
-    for l in range(L):
-        for t in range(tau_p):
-            pilotUEs, = np.where(pilotIndex == t)
-            if len(pilotUEs) > 0:
-                UEindex = np.argmax(gainOverNoisedB[l, pilotIndex == t])
-                D[l, pilotUEs[UEindex]] = 1
-
-    # Determine the AP serving each UE in the small-cell setup by considering the APs from the set M_k for UE k,
-    # i.e., where D[:,k]=1
+    # every user is served at least by its master AP
     for k in range(K):
-        tempmat = -np.inf * np.ones((L, 1))
-        tempmat[D[:, k] == 1, 0] = gainOverNoisedB[D[:, k] == 1, k]
-        servingAP = np.argmax(tempmat[:, 0])
-        D_small[servingAP, k] = 1
+        # Determine the master AP for UE k by looking for the AP with best channel condition
+        master = np.argmax(gainOverNoisedB[:, k])
 
-    # # UEs and APs position graph
-    # plt.scatter(UEpositions.real, UEpositions.imag, color='r', marker='*')
-    # plt.scatter(APpositions.real, APpositions.imag, color='g', marker='v')
-    # for i, txt in enumerate(list(range(K))):
-    #     plt.annotate(txt, (UEpositions[i].real, UEpositions[i].imag))
-    # plt.xlim([0, 1000])
-    # plt.ylim([0, 1000])
-    # plt.show()
+        # serve user k by its master
+        D[master, k] = 1
+
+    # # Each AP serves the UE with the strongest channel condition on each of the pilots
+    # for l in range(L):
+    #     for t in range(tau_p):
+    #         pilotUEs, = np.where(pilotIndex == t)
+    #         if len(pilotUEs) > 0:
+    #             UEindex = np.argmax(gainOverNoisedB[l, pilotIndex == t])
+    #             D[l, pilotUEs[UEindex]] = 1
+
+    # # To draw the assignation of APs to the users
+    # serving_APs = np.argmax(D, axis=0)
+    # drawPilotAssignment(UEpositions, APpositions, serving_APs, title="User allocation "+pilot_alloc_mode)
+    #
+    # for k in range(K):
+    #     for l in range(L):
+    #         R[:, :, l, k] = db2pow(gainOverNoisedB[l, k]) * R[:, :, l, k]
+
+
 
     return gainOverNoisedB, R, pilotIndex, D, D_small
 
-def pilotAssignment(K, L, tau_p, APpositions, UEpositions, distances, gainOverNoisedB, R, mode):
+def pilotAssignment(K, L, N, tau_p, APpositions, UEpositions, distances, gainOverNoisedB, R, mode):
     """return the pilot allocation
     INPUT>
     :param K: number of users
@@ -184,6 +197,7 @@ def pilotAssignment(K, L, tau_p, APpositions, UEpositions, distances, gainOverNo
                             (normalized by noise variance) between AP l and UE k
     :param R: matrix with dimensions N x N x L x K where (:,:,l,k) is the spatial correlation
                             matrix between  AP l and UE k (normalized by noise variance)
+    :param mode: select the clustering mode
     OUTPUT>
     pilotIndex: vector whose entry pilotIndex[k] contains the index of pilot assigned to UE k
     """
@@ -245,10 +259,10 @@ def pilotAssignment(K, L, tau_p, APpositions, UEpositions, distances, gainOverNo
         UE_clustering = kmeans.labels_
 
         # draw UE clustering
-        drawPilotAssignment(UEpositions, UE_clustering, title='UE Clustering')
+        drawPilotAssignment(UEpositions, APpositions, UE_clustering, title='UE Clustering')
 
         # compute pilot allocation for the obtained clustering
-        pilotIndex = inCluster_pilotAllocation(UE_clustering, K, tau_p, L)
+        pilotIndex = inCluster_pilotAllocation(UE_clustering, R, gainOverNoisedB, K, tau_p, N, mode='best_first')
 
     elif mode == 'Kmeans_basic_R':
         kmeans = KMeans(init = "random",
@@ -259,14 +273,24 @@ def pilotAssignment(K, L, tau_p, APpositions, UEpositions, distances, gainOverNo
                         )
 
         features = []
+        features_eigenvectors = []
         for k in range(K):
             # Determine the master AP for UE k by looking for the AP with best channel condition
             master = np.argmax(gainOverNoisedB[:, k])
-            # Get the correlation matrix associated with the master AP
-            flatten_complex_features = R[:, :, master, k].flatten()
 
-            # flatten_complex_features = sum([R[:,:,l, k] for l in range(L)]).flatten()/L
+            # Get the correlation matrix associated with the master AP
+            # R_k = R[:, :, master, k]/db2pow(gainOverNoisedB[master, k])
+            R_k = R[:, :, master, k]
+
+            # Compute the eigenvectors and get the eigenvector associated with largest eigenvalue
+            eigenvalues, eigenvectors = np.linalg.eig(R_k)
+            index = np.argsort(eigenvalues)
+            eigenvectors = eigenvectors[:, index]
+            eigenvalues = eigenvalues[index]
+            flatten_complex_features = eigenvectors[-1].flatten()
+
             features.append(np.concatenate((flatten_complex_features.real, flatten_complex_features.imag)))
+            features_eigenvectors.append(flatten_complex_features)
 
         # scale features
         scaler = StandardScaler()
@@ -288,15 +312,112 @@ def pilotAssignment(K, L, tau_p, APpositions, UEpositions, distances, gainOverNo
         UE_clustering = kmeans.labels_
 
         # draw UE clustering
-        drawPilotAssignment(UEpositions, UE_clustering, title='UE Clustering')
+        drawPilotAssignment(UEpositions, APpositions, UE_clustering, title='UE Clustering '+mode)
 
         # compute pilot allocation for the obtained clustering
-        pilotIndex = inCluster_pilotAllocation(UE_clustering, K, tau_p, L)
+        pilotIndex = inCluster_pilotAllocation(UE_clustering, gainOverNoisedB, K, tau_p, L, mode='worst_first')
 
-    drawPilotAssignment(UEpositions, pilotIndex, title='Pilot Assignment')
+    elif mode == 'Kbeams':
+        # number of initial beams
+        number_beams = tau_p
+        # compute equispaced angles for the initial beams
+        initial_angles_deg = np.linspace(-85, 85, number_beams + 1)[:-1]
+        initial_angles = np.radians(initial_angles_deg)
+
+        # to store the correlation matrices for the initial beams
+        R_beams = np.zeros((number_beams, N, N), dtype=complex)
+
+        # compute the correlation matrices for the initial beams
+        for beam in range(number_beams):
+            R_b = localScatteringR(N, initial_angles[beam])
+            R_beams[beam, :, :] = R_b / np.linalg.norm(R_b)
+
+        # to store the correlation matrices for the UEs in a different structure
+        R_UEs = np.zeros((K, N, N), dtype=complex)
+
+        # re-store the R matrices for the UEs
+        for k in range(K):
+            for l in range(L):  # Go through all APs
+                angle_k = np.angle(UEpositions[k] - APpositions[l])
+                R_k = localScatteringR(N, angle_k)
+                R_UEs[k, :, :] = R_k / np.linalg.norm(R_k)
+
+        # to store the beam clustering
+
+        beam_allocation = [[] for _ in range(number_beams)]
+
+        correlation_factors = np.zeros((K, number_beams))
+        for k in range(K):
+            # correlation_factors = np.zeros(number_beams)
+            for beam in range(number_beams):
+                correlation_factors[k, beam] = np.abs(np.vdot(np.array(R_beams[beam, :, :]), np.array(R_UEs[k, :, :])))
+            matching_beam = np.argmax(correlation_factors[k, :])
+            beam_allocation[matching_beam].append(k)
+
+        new_R_beams = []
+        for beam in range(number_beams):
+            if beam_allocation[beam]:
+                new_R_beams.append(sum([R_UEs[allocated_user, :, :] for allocated_user in beam_allocation[beam]]))
+        number_beams = len(new_R_beams)
+        new_R_beams = np.array(new_R_beams)
+
+        beam_allocation = list(filter(None, beam_allocation))
+
+        # to draw
+        UE_clustering = np.zeros((K), int)
+        for beam in range(number_beams):
+            for user in beam_allocation[beam]:
+                UE_clustering[user] = beam
+
+        drawPilotAssignment(UEpositions, APpositions, pilotIndex, title='UE Clustering ')
+        #
+
+        updating = True
+        while updating:
+            # beam_allocation = new_beam_allocation
+            new_beam_allocation = [[] for _ in range(number_beams)]
+            correlation_factors = np.zeros((K, number_beams))
+            for k in range(K):
+                # correlation_factors = np.zeros(number_beams)
+                for beam in range(number_beams):
+                    correlation_factors[k, beam] = np.abs(
+                        np.vdot(np.array(new_R_beams[beam, :, :]), np.array(R_UEs[k, :, :])))
+                matching_beam = np.argmax(correlation_factors[k, :])
+                new_beam_allocation[matching_beam].append(k)
+            new_R_beams = []
+            for beam in range(number_beams):
+                if new_beam_allocation[beam]:
+                    new_R_beams.append(
+                        sum([R_UEs[allocated_user, :, :] for allocated_user in new_beam_allocation[beam]]))
+            number_beams = len(new_R_beams)
+            new_R_beams = np.array(new_R_beams)
+
+            new_beam_allocation = list(filter(None, new_beam_allocation))
+
+            if new_beam_allocation == beam_allocation:
+                updating = False
+            else:
+                beam_allocation = new_beam_allocation
+
+            # to draw
+            UE_clustering = np.zeros((K), int)
+            for beam in range(number_beams):
+                for user in new_beam_allocation[beam]:
+                    UE_clustering[user] = beam
+
+            drawPilotAssignment(UEpositions, APpositions, UE_clustering, title='UE Clustering ')
+            #
+
+        # compute pilot allocation for the obtained clustering
+        pilotIndex = inCluster_pilotAllocation(UE_clustering, R, gainOverNoisedB, K, tau_p, N, mode='best_first')
+
+
+
+
+    drawPilotAssignment(UEpositions, APpositions, pilotIndex, title='Pilot Assignment '+mode)
     return pilotIndex
 
-def inCluster_pilotAllocation(clustering, K, tau_p, L, mode='basic'):
+def inCluster_pilotAllocation(clustering, R, gainOverNoisedB, K, tau_p, N, mode):
     """Use clustering information to assign pilots to the UEs. UEs in the same cluster should be assigned
     different pilots
     INPUT>
@@ -304,7 +425,7 @@ def inCluster_pilotAllocation(clustering, K, tau_p, L, mode='basic'):
     OUTPUT>
     pilotIndex: vector whose entry pilotIndex[k] contains the index of pilot assigned to UE k
     """
-    pilotIndex = np.zeros((K), int)
+    pilotIndex = -1*np.ones((K), int)
     if mode=='basic':
         for c in range(max(clustering)+1):
             p = c
@@ -312,12 +433,62 @@ def inCluster_pilotAllocation(clustering, K, tau_p, L, mode='basic'):
             for userInCluster in usersInCluster:
                 pilotIndex[userInCluster] = p%tau_p
                 p+=1
+    elif mode=='worst_first':
+        for c in range(max(clustering) + 1):
+            p = c
+            usersInCluster, = np.where(clustering == c)
+            ordered_usersInCluster = sorted(usersInCluster, key=lambda x: gainOverNoisedB[0, x])
+            for ind, user in enumerate(ordered_usersInCluster):
+                if ind < tau_p:
+                    pilotIndex[user] = p%tau_p
+                    p+=1
+                else:
+                    interference = np.zeros(tau_p)
+                    for t in range(tau_p):
+                        interference[t] = sum(db2pow(gainOverNoisedB[0, usersInCluster]
+                                                     [pilotIndex[usersInCluster]==t]))
+                    pilotIndex[user] = np.argmin(interference)
+    elif mode=='best_first':
+        for c in range(max(clustering) + 1):
+            p = c
+            usersInCluster, = np.where(clustering == c)
+            ordered_usersInCluster = sorted(usersInCluster, key=lambda x: gainOverNoisedB[0, x], reverse=True)
+            for ind, user in enumerate(ordered_usersInCluster):
+                if ind < tau_p:
+                    pilotIndex[user] = p%tau_p
+                    p+=1
+                else:
+                    interference = np.zeros(tau_p)
+                    for t in range(tau_p):
+                        interference[t] = sum(db2pow(gainOverNoisedB[0, usersInCluster]
+                                                     [pilotIndex[usersInCluster]==t]))
+                    pilotIndex[user] = np.argmin(interference)
+
+    elif mode=='bf_NMSE':
+        for c in range(max(clustering) + 1):
+            p = c
+            usersInCluster, = np.where(clustering == c)
+            ordered_usersInCluster = sorted(usersInCluster, key=lambda x: gainOverNoisedB[0, x], reverse=True)
+            for ind, user in enumerate(ordered_usersInCluster):
+                if ind < tau_p:
+                    pilotIndex[user] = p%tau_p
+                    p+=1
+                else:
+                    NMSE = np.zeros(tau_p)
+                    for t in range(tau_p):
+                        pilotSharing_UEs, = np.where(pilotIndex[usersInCluster] == t)
+                        interference = alg.inv(np.identity(N)
+                                               + sum([tau_p*p*R[:, :, 0, k] for k in usersInCluster[pilotSharing_UEs]])
+                                               + tau_p*p*R[:, :, 0, user])
+                        NMSE[t] = 1 - (tau_p*p*np.trace(R[:, :, 0, user]@interference@R[:, :, 0, user])/
+                                np.trace(R[:, :, 0, user])).real
+                    pilotIndex[user] = np.argmin(NMSE)
 
     return pilotIndex
 
 
 
-def drawPilotAssignment(UEpositions, pilotIndex, title):
+def drawPilotAssignment(UEpositions, APpositions, pilotIndex, title):
     """
     INPUT>
     :param UEpositions: (see above)
@@ -326,17 +497,17 @@ def drawPilotAssignment(UEpositions, pilotIndex, title):
     """
 
     # create a custom color palette for up to 10 orthogonal pilots
-    custom_colors = np.array(['red', 'blue', 'green', 'orchid', 'aqua', 'orange', 'lime', 'black', 'pink', 'yellow'])
+    custom_colors = np.array(['red', 'dodgerblue', 'green', 'orchid', 'aqua', 'orange', 'lime', 'black', 'pink', 'yellow']*10)
 
     # pilot assignment graph
     plt.scatter(UEpositions.real, UEpositions.imag, c=custom_colors[pilotIndex], marker='*')
+    plt.scatter(APpositions.real, APpositions.imag, c='mediumblue', marker='^')
     plt.title(title)
     for i, txt in enumerate(range(len(UEpositions))):
         plt.annotate(txt, (UEpositions[i].real, UEpositions[i].imag))
     plt.xlim([0, 1000])
     plt.ylim([0, 1000])
     plt.show()
-    print('end_showing')
 
 def db2pow(dB):
     """return the power values that correspond to the input dB values
@@ -348,7 +519,7 @@ def db2pow(dB):
     pow = 10**(dB/10)
     return pow
 
-def localScatteringR(N, nominalAngle, ASD, antennaSpacing):
+def localScatteringR(N, nominalAngle, ASD=math.radians(5), antennaSpacing=0.5):
     """return the approximate spatial correlation matrix for the local scattering model
     INPUT>
     :param N: number of antennas at the AP
