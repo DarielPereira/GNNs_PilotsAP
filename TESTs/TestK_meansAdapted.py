@@ -59,7 +59,7 @@ pilotIndex = np.array([0, 1, 1, 1, 0], dtype=int)
 
 number_beams = 10
 
-initial_angles_deg = np.linspace(-85, 85, number_beams+1)[:-1]
+initial_angles_deg = np.linspace(-90, 90, number_beams+1)[:-1]
 initial_angles = np.radians(initial_angles_deg)
 
 R_beams = np.zeros((number_beams, N, N), dtype=complex)
@@ -79,8 +79,8 @@ for beam in range(number_beams):
     R = localScatteringR(N, initial_angles[beam], ASD_varphi, antennaSpacing)
     R_beams[beam, :, :] = R / np.linalg.norm(R)
 
-# R_combined = np.sum(R_beams, axis=0)
-# correlationNormalized_grid(R_combined, N, UE_positions)
+R_combined = np.sum(R_beams, axis=0)
+correlationNormalized_grid(R_combined, N, UE_positions)
 
 correlation_factors = np.zeros((K, number_beams))
 for k in range(len(UE_positions)):

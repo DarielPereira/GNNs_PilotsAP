@@ -37,7 +37,7 @@ def functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex,):
     # To store the interference (pilot sharing users' correlation matrices and noise) matrices according to Eq. 4.6.
     Psi = np.zeros((N, N, L, tau_p), dtype=complex)
     # To store the NMSE per UE
-    UEs_NMSE = np.zeros(K, dtype=complex)
+    UEs_NMSE = np.zeros(K)
 
     # Compute the Psi matrices
     # run over all the pilots
