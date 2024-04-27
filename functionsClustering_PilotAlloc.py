@@ -55,6 +55,8 @@ def pilotAssignment(K, L, N, tau_p, APpositions, UEpositions, distances, gainOve
 
     # to store pilot assignment
     pilotIndex = np.zeros((K), int)
+    # to store clustering if needed
+    UE_clustering = np.zeros((K), int)
 
     # check for DCC mode
     if clustering_mode == 'DCC':
@@ -225,7 +227,7 @@ def pilotAssignment(K, L, N, tau_p, APpositions, UEpositions, distances, gainOve
                     UE_clustering[user] = beam
 
             # drawPilotAssignment(UEpositions, APpositions, UE_clustering, title='UE Clustering ')
-            #
+
 
         # compute pilot allocation for the obtained clustering
         pilotIndex = inCluster_pilotAllocation(UE_clustering, R, gainOverNoisedB, K, tau_p, N, mode=PA_mode)
@@ -234,7 +236,7 @@ def pilotAssignment(K, L, N, tau_p, APpositions, UEpositions, distances, gainOve
 
 
     # drawPilotAssignment(UEpositions, APpositions, pilotIndex, title='Pilot Assignment '+clustering_mode)
-    return pilotIndex
+    return pilotIndex, UE_clustering
 
 def inCluster_pilotAllocation(clustering, R, gainOverNoisedB, K, tau_p, N, mode):
     """Use clustering information to assign pilots to the UEs. UEs in the same cluster should be assigned
@@ -323,6 +325,7 @@ def inCluster_pilotAllocation(clustering, R, gainOverNoisedB, K, tau_p, N, mode)
                         sum_NMSE[t] = sum([1 - (tau_p*p*np.trace(R[:, :, 0, k]@interference@R[:, :, 0, k])/
                                 np.trace(R[:, :, 0, k])).real for k in usersInCluster[pilotSharing_UEs]])
                     pilotIndex[user] = np.argmin(sum_NMSE)
+
     return pilotIndex
 
 def Kbeams_init(K, L, tau_p, N, UEpositions, APpositions, mode):
@@ -376,7 +379,7 @@ def Kbeams_init(K, L, tau_p, N, UEpositions, APpositions, mode):
 
         case 'dissimilar_K':
             # number of initial beams
-            number_beams = tau_p
+            number_beams = int(K/tau_p)
 
             first_user = np.random.randint(0, K - 1)
 

@@ -16,7 +16,7 @@ constantTerm = -30.5
 
 p = 100
 tau_p = 10
-N = 20
+N = 200
 K = 2
 L = 1
 pilotIndex = np.array([0, 0], dtype=int)
@@ -77,6 +77,9 @@ for idxi, i in enumerate(range(0, 1000, 10)):
                                            (1+db2pow(UE_fixed_gainOverNoisedB)*p*tau_p+db2pow(UE_mobil_gainOverNoisedB)*tau_p*p))
                                           * product_Rs_norm_norm[idxj, idxi])
 
+
+np.savez(f'./Grid',
+                 grid_NMSEs=NMSe_fixed_values, grid_productCorrelations=product_Rs_norm_norm, UE_position=UE_fixed)
 
 
 

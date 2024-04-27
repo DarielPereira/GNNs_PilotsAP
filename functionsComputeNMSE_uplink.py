@@ -51,14 +51,18 @@ def functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex,):
 
     # Compute the UEs' NMSE values
     for k in range(K):
-        # get the pilot assigned to UE k
-        t_k = pilotIndex[k]
 
-        # get the APs serving user k
-        serving_APs, = np.where(D[:, k] == 1)
+        if sum(D[:, k]) > 0:
+            # get the pilot assigned to UE k
+            t_k = pilotIndex[k]
 
-        UEs_NMSE[k] = 1 - (sum([tau_p*p*np.trace(R[:, :, l, k]@Psi[:, :, l, t_k]@R[:, :, l, k]) for l in serving_APs])/
+            # get the APs serving user k
+            serving_APs, = np.where(D[:, k] == 1)
+
+            UEs_NMSE[k] = 1 - (sum([tau_p*p*np.trace(R[:, :, l, k]@Psi[:, :, l, t_k]@R[:, :, l, k]) for l in serving_APs])/
                                 sum([np.trace(R[:, :, l, k]) for l in serving_APs])).real
+        else:
+            UEs_NMSE[k] = 0
 
     # sum of NMSE of all UEs
     system_NMSE = np.sum(UEs_NMSE)

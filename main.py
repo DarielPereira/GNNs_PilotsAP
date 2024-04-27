@@ -65,7 +65,7 @@ for setting in grid_parameters(classic_parameters):
         print("Setup iteration {} of {}".format(iter, nbrOfSetups))
 
         # Generate one setup with UEs and APs at random locations
-        gainOverNoisedB, R, pilotIndex, D, D_small = generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta,
+        gainOverNoisedB, R, pilotIndex, clustering, D, D_small = generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta,
                                                                    nbrOfRealizations, seed=iter, **setting)
 
         # Compute NMSE for all the UEs
