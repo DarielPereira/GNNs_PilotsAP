@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import random
 import math
 
-def functionComputeSE_uplink(Hhat, H, D, D_small, B, C, tau_c, tau_p, T, nbrOfRealizations, N, K, L, p, R, pilotIndex):
+def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, T, nbrOfRealizations, N, K, L, p, R, pilotIndex):
     """Compute uplink SE for different receive combining schemes using the capacity bound in Theorem 5.1
     for the centralized scheme and the capacity bound in Theorem  5.4 for the distributed schemes. Compute
     the genie-aided uplink SE from Corollary 5.9 for the centralized operation and 5.10 for ths distributed one.
@@ -18,10 +18,6 @@ def functionComputeSE_uplink(Hhat, H, D, D_small, B, C, tau_c, tau_p, T, nbrOfRe
                         to UE k in channel realization n.
     :param D: DCC matrix with dimensions LxK where the element (l,k) equals '1' if AP l serves
                         UE k, and '0' otherwise
-    :param D_small: DCC matrix with dimensions LxK where the element (l,k) equals '1' if AP l serves
-                        UE k, and '0' otherwise (for small-cell setups)
-    :param B: matrix with dimensions N x N x L x K where (:,:,l,k) is the spatial correlation matrix of the channel estimate
-                        between AP l and UE k (normalized by noise variance)
     :param C: matrix with dimension N x N x L x K where (:,:,l,k) is the spatial correlation matrix of the channel estimation
                         error between AP l and UE k (normalized by noise variance)
     :param tau_c: length of the coherence block

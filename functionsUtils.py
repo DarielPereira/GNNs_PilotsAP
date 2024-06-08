@@ -4,6 +4,8 @@ import math
 import scipy.linalg as spalg
 import matplotlib.pyplot as plt
 from itertools import product
+import plotly.express as px
+import pickle
 
 def db2pow(dB):
     """return the power values that correspond to the input dB values
@@ -68,3 +70,56 @@ def correlationNormalized_grid(R_fixed, N, UE_positions):
 def grid_parameters(parameters):
     for params in product(*parameters.values()):
         yield dict(zip(parameters.keys(), params))
+
+
+def drawingSetup(UEpositions, APpositions, colorIndex, title, squarelength):
+    """
+    INPUT>
+    :param UEpositions: list of lists containing positions of UEs
+    :param APpositions: list of lists containing positions of APs
+    :param colorIndex: index of color for each UE
+    :param title: title of the plot
+    :param squarelength: side of the cell
+    """
+
+    # create a custom color palette for up to 10 orthogonal pilots
+    custom_colors = np.array(['red', 'dodgerblue', 'green', 'orchid', 'aqua', 'orange', 'lime', 'black', 'pink', 'yellow']*10)
+
+    # pilot assignment graph
+    plt.scatter(UEpositions.real, UEpositions.imag, c=custom_colors[colorIndex], marker='*')
+    plt.scatter(APpositions.real, APpositions.imag, c='mediumblue', marker='^', s=8)
+    plt.title(title)
+    for i, txt in enumerate(range(len(UEpositions))):
+        plt.annotate(txt, (UEpositions[i].real, UEpositions[i].imag))
+    plt.xlim([0, squarelength])
+    plt.ylim([0, squarelength])
+    plt.show()
+
+def drawing3Dvectors(UEvectorMatrix, colorIndex, title):
+    # # create a custom color palette for up to 10 orthogonal pilots
+    custom_colors = np.array(
+        ['red', 'dodgerblue', 'green', 'orchid', 'aqua', 'orange', 'lime', 'black', 'pink', 'yellow'] * 10)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+
+    ax.scatter(UEvectorMatrix[:,0], UEvectorMatrix[:,1], UEvectorMatrix[:,2], c=custom_colors[colorIndex], marker='o')
+
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+
+    for i, txt in enumerate(range(UEvectorMatrix.shape[0])):
+        ax.text(UEvectorMatrix[i,0], UEvectorMatrix[i,1], UEvectorMatrix[i,2], str(i))
+
+    plt.show()
+
+def save_results(obj, filename):
+    with open(filename, 'wb') as outp:  # Overwrites any existing file.
+        pickle.dump(obj, outp, pickle.HIGHEST_PROTOCOL)
+
+
+def load_results(filename):
+    with open(filename, 'rb') as inp:
+        results = pickle.load(inp)
+    return results

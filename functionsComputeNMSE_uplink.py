@@ -5,7 +5,7 @@ import scipy.linalg as spalg
 import matplotlib.pyplot as plt
 import random
 
-def functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex,):
+def functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex):
     """ Compute the NMSE for evey user according to equation (4.21).
     Pilot transmitting power is assumed equal for all the UEs
 
@@ -77,7 +77,5 @@ def functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex,):
         if len(NMSE_pilotSharing_UEs) > 0:
             worst_userXpilot[t] = max(UEs_NMSE[pilotIndex[:] == t])
             best_userXpilot[t] = min(UEs_NMSE[pilotIndex[:] == t])
-
-    print('average worst: {}'.format(sum(worst_userXpilot)/tau_p))
 
     return system_NMSE, UEs_NMSE, worst_userXpilot, best_userXpilot

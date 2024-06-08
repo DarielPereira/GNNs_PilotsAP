@@ -1,92 +1,81 @@
 import numpy as np
 
 from functionsSetup import *
-from __Unused.functionsComputeExpectations import *
 from functionsComputeNMSE_uplink import functionComputeNMSE_uplink
 import math
 
-import seaborn as sns
-from functionsUtils import grid_parameters
+from functionsClustering import cfMIMO_clustering
+from functionsPilotAlloc import pilotAssignment
+from functionsChannelEstimates import channelEstimates
+from functionsComputeSE_uplink import functionComputeSE_uplink
 
 
 ##Setting Parameters
-nbrOfSetups = 10                # number of Monte-Carlo setups
-nbrOfRealizations = 1           # number of channel realizations per setup
-
-L = 1                           # number of APs
-N = 200                         # number of antennas per AP
-
-K = 100                         # number of UEs
-
-tau_c = 5                    # length of coherence block
-tau_p = 10                   # length of pilot sequences
-prelogFactor = 1-tau_p/tau_c    # uplink data transmission prelog factor
-
-ASD_varphi = math.radians(5)  # Azimuth angle - Angular Standard Deviation in the local scattering model
-ASD_theta = math.radians(15)   # Elevation angle - Angular Standard Deviation in the local scattering model
-
-p = 100                         # total uplink transmit power per UE
-
-# To save the simulation results
-NMSE = np.zeros((K, nbrOfSetups))       # MMSE/all APs serving all the UEs
-
-# Clustering modes ['Kbeams', 'DCC', 'Kmeans_basic_positions', 'Kmeans_basic_R', 'SGPS']
-# clustering_modes = ['Kbeams']
-# In-clusters pilot allocation modes ['basic', 'worst_first', 'best_first', 'bf_NMSE', 'wf_NMSE']
-# PA_mode = 'bf_NMSE'
-
-classic_parameters = {
-    # Select from ['DCC', 'SGPS', 'random']
-    'PA_mode': ['DCC', 'SGPS']
-}
-Kmeans_parameters = {
-    # Select from ['Kmeans_basic_positions']
-    'clustering_mode': ['Kmeans_basic_positions'],
-    # Select from ['basic', 'worst_first', 'best_first', 'bf_NMSE', 'wf_NMSE']
-    'PA_mode': ['best_first', 'worst_first']
-}
-Kbeams_parameters = {
-    # Select from ['Kbeams']
-    'clustering_mode': ['Kbeams'],
-    # Select from ['basic', 'worst_first', 'best_first', 'bf_NMSE', 'wf_NMSE']
-    'PA_mode': ['bf_NMSE'],
-    # select from ['basic_angle_spread', 'dissimilar_K']
-    'init_mode': ['basic_angle_spread', 'dissimilar_K']
+configuration = {
+    'nbrOfSetups': 1,             # number of Monte-Carlo setups
+    'nbrOfRealizations': 1,       # number of channel realizations per setup
+    'L': 100,                       # number of APs
+    'N': 4,                     # number of antennas per AP
+    'K': 100,                     # number of UEs
+    'tau_c': 200,                 # length of the coherence block
+    'tau_p': 10,                  # length of the pilot sequences
+    'T': 1,                       # pilot reuse factor
+    'p': 100,                     # uplink transmit power per UE in mW
+    'ASD_varphi': math.radians(10),         # Azimuth angle - Angular Standard Deviation in the local scattering model
+    'ASD_theta': math.radians(15),          # Elevation angle - Angular Standard Deviation in the local scattering model
+    'cl_mode': 'no_clustering',             # clustering mode from
+    # ['Kmeans_locations', 'Kfootprints', 'no_clustering']
+    'pa_mode': 'DCC'                        # pilot allocation mode from
+    # ['random', 'balanced_random', 'DCPA', 'DCC', 'basic_iC', 'bf_iC', 'bfNMSE_iC', 'bf_bAPs_iC']
 }
 
-# iterate over pilot allocation modes
-for setting in grid_parameters(classic_parameters):
-    system_NMSEs = []
-    UEs_NMSEs = []
-    ordered_UEs_NMSEs = []
+print('### CONFIGURATION PARAMETERS ###')
+for param in configuration:
+    print(param+f': {configuration[param]}')
+print('###  ###\n')
 
-    # iterate over the setups
-    for iter in range(nbrOfSetups):
-        print("Setup iteration {} of {}".format(iter, nbrOfSetups))
+nbrOfSetups = configuration['nbrOfSetups']
+nbrOfRealizations = configuration['nbrOfRealizations']
+L = configuration['L']
+N = configuration['N']
+K = configuration['K']
+tau_c = configuration['tau_c']
+tau_p = configuration['tau_p']
+T = configuration['T']
+p = configuration['p']
+ASD_varphi = configuration['ASD_varphi']
+ASD_theta = configuration['ASD_theta']
 
-        # Generate one setup with UEs and APs at random locations
-        gainOverNoisedB, R, pilotIndex, clustering, D, D_small = generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta,
-                                                                   nbrOfRealizations, seed=iter, **setting)
 
-        # Compute NMSE for all the UEs
-        system_NMSE, UEs_NMSE, worst_userXpilot, best_userXpilot = functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex)
+# iterate over the setups
+for iter in range(nbrOfSetups):
+    print("Setup iteration {} of {}".format(iter, nbrOfSetups))
 
-        system_NMSEs.append(system_NMSE)
-        UEs_NMSEs.append(UEs_NMSE)
-        ordered_UEs_NMSEs.append(np.sort(UEs_NMSE))
+    # Generate one setup with UEs and APs at random locations
+    gainOverNoisedB, distances, R, APpositions, UEpositions = (
+        generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfRealizations, seed=2))
 
-    if len(setting) == 1:
-        np.savez(f'./VARIABLES_SAVED/{setting['PA_mode']}',
-                 system_NMSEs=system_NMSEs, UEs_NMSEs=UEs_NMSEs, ordered_UEs_NMSEs=ordered_UEs_NMSEs)
+    # clustering modes ['Kmeans_locations', 'Kfootprints', 'no_clustering']
+    UE_clustering \
+        = cfMIMO_clustering(gainOverNoisedB, R, tau_p, APpositions, UEpositions, mode=configuration['cl_mode'])
 
-    elif len(setting) == 2:
-        np.savez(f'./VARIABLES_SAVED/{setting['clustering_mode']}__{setting['PA_mode']}',
-                 system_NMSEs=system_NMSEs, UEs_NMSEs=UEs_NMSEs, ordered_UEs_NMSEs=ordered_UEs_NMSEs)
+    # pilot assignment modes ['random', 'balanced_random', 'DCPA', 'DCC', 'basic_iC', 'bf_iC', 'bfNMSE_iC', 'bf_bAPs_iC']
+    pilotIndex, D = pilotAssignment(UE_clustering, R, gainOverNoisedB, K, tau_p, L, N, mode=configuration['pa_mode'])
 
-    elif len(setting) == 3:
-        np.savez(f'./VARIABLES_SAVED/{setting['clustering_mode']}__{setting['PA_mode']}__{setting['init_mode']}',
-                 system_NMSEs=system_NMSEs, UEs_NMSEs=UEs_NMSEs, ordered_UEs_NMSEs=ordered_UEs_NMSEs)
+    # Compute NMSE for all the UEs
+    system_NMSE, UEs_NMSE, worst_userXpilot, best_userXpilot \
+        = functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex)
 
+    print('System NMSE: {}'.format(system_NMSE))
+
+    # Generate channel realizations with estimates and estimation error matrices
+    Hhat, H, B, C = channelEstimates(R, nbrOfRealizations, L, K, N, tau_p, pilotIndex, p)
+
+    # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
+    SE_MMSE = functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, T,
+                                       nbrOfRealizations, N, K, L, p, R, pilotIndex)
+
+    print('Sum-rate: {}'.format(sum(SE_MMSE)))
 
 print('end')
 
