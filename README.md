@@ -1,5 +1,13 @@
 # GNNs optimization of the AP and Pilot allocation in Cell-Free MIMO Systems
 
+## Versions:
+    # 20241108: 
+        # Added:
+            # Include the method main_CDF.py that compute the CDF that generates the values
+              to generate the CDF graphs for Optimal, DCC and ALL baselines.   
+        # To do:
+            __.
+
 ## Getting Started
 
 Download links:
