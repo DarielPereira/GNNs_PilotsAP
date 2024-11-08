@@ -1,5 +1,13 @@
 # GNNs optimization of the AP and Pilot allocation in Cell-Free MIMO Systems
 
+## Versions:
+    # 20241108: 
+        # Added:
+            # 
+
+        # To do:
+            __.
+
 ## Getting Started
 
 Download links:
