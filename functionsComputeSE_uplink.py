@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import random
 import math
 
-def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, T, nbrOfRealizations, N, K, L, p, R, pilotIndex):
+def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, nbrOfRealizations, N, K, L, p):
     """Compute uplink SE for different receive combining schemes using the capacity bound in Theorem 5.1
     for the centralized scheme and the capacity bound in Theorem  5.4 for the distributed schemes. Compute
     the genie-aided uplink SE from Corollary 5.9 for the centralized operation and 5.10 for ths distributed one.
@@ -22,7 +22,6 @@ def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, T, nbrOfRealizations, 
                         error between AP l and UE k (normalized by noise variance)
     :param tau_c: length of the coherence block
     :param tau_p: length of pilot sequences
-    :param T: pilot reuse factor
     :param nbrOfRealizations: number of channel realizations
     :param N: number of antennas per AP
     :param K: number of UEs
@@ -60,16 +59,13 @@ def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, T, nbrOfRealizations, 
 
 
     # Compute the prelog factor assuming only uplink data transmission
-    prelogFactor = math.ceil((tau_c-T*tau_p)/3)/tau_c
+    prelogFactor = math.ceil((tau_c-tau_p)/3)/tau_c
+
 
     # Prepare to store simulation results
     SE_MMSE = np.zeros((K, 1), dtype=complex)
-
-
-    # Prepare to store the terms that appear in the SE expressions
-    gki_L_MMSE = np.zeros((K, K, L), dtype=complex)
-    gki2_L_MMSE = np.zeros((K, K, L), dtype=complex)
-    Fk_L_MMSE = np.zeros((L, K), dtype=complex)
+    SE_P_RZF = np.zeros((K, 1), dtype=complex)
+    SE_MR = np.zeros((K, 1), dtype=complex)
 
     # Go through all channel realizations
     for n in range(nbrOfRealizations):
@@ -115,8 +111,46 @@ def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, T, nbrOfRealizations, 
                 # Update the SE by computing the instantaneous reward for one channel realization
                 # according to 5.4
                 SE_MMSE[k] = SE_MMSE[k] + prelogFactor * (np.log2(1 + numerator / denominator)).real / nbrOfRealizations
+
+
+                # Compute P-RZF combining according to 5.18
+                v = p * (alg.inv(
+                    p * (Hhatallj_active[:, servedUEs] @ Hhatallj_active[:, servedUEs].conjugate().T) + np.identity(
+                        La * N)) @ Hhatallj_active[:, k])
+
+                # Compute numerator and denominator of instantaneous SINR in 5.5
+                numerator = p * np.abs(v.conjugate().T @ Hhatallj_active[:, k]) ** 2
+                denominator = p * alg.norm(v.conjugate().T @ Hhatallj_active) ** 2 + v.conjugate().T @ (
+                        p * C_tot_blk + np.identity(La * N)) @ v - numerator
+
+                # Compute numerator and denominator of instantaneous SINR in 5.50
+                numerator_gen = p * np.abs(v.conjugate().T @ Hallj_active[:, k]) ** 2
+                denominator_gen = p * alg.norm(
+                    v.conjugate().T @ Hallj_active) ** 2 + v.conjugate().T @ v - numerator_gen
+
+                # Update the SE by computing the instantaneous reward for one channel realization
+                # according to 5.4
+                SE_P_RZF[k] = SE_P_RZF[k] + prelogFactor * (
+                    np.log2(1 + numerator / denominator)).real / nbrOfRealizations
+
+
+
+                # Compute centralized MR combining according to 5.14
+                v = Hhatallj_active[:, k]
+
+                # Compute numerator and denominator of instantaneous SINR in 5.5
+                numerator = p * np.abs(v.conjugate().T @ Hhatallj_active[:, k]) ** 2
+                denominator = p * alg.norm(v.conjugate().T @ Hhatallj_active) ** 2 + v.conjugate().T @ (
+                        p * C_tot_blk + np.identity(La * N)) @ v - numerator
+
+                # Update the SE by computing the instantaneous SE for one channel realization according to 5.4
+                SE_MR[k] = SE_MR[k] + prelogFactor * (
+                    np.log2(1 + numerator / denominator)).real / nbrOfRealizations
+
+
             else:
                 SE_MMSE[k] = SE_MMSE[k] + 0
+                SE_P_RZF[k] = SE_P_RZF[k] + 0
+                SE_MR[k] = SE_MR[k] + 0
 
-
-    return SE_MMSE
+    return SE_MMSE, SE_P_RZF, SE_MR

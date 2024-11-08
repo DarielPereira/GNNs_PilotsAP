@@ -5,7 +5,7 @@ from functionsComputeNMSE_uplink import functionComputeNMSE_uplink
 import math
 
 from functionsClustering import cfMIMO_clustering
-from functionsPilotAlloc import pilotAssignment
+from functionsAllocation import pilotAssignment
 from functionsChannelEstimates import channelEstimates
 from functionsComputeSE_uplink import functionComputeSE_uplink
 
@@ -21,6 +21,7 @@ configuration = {
     'tau_p': 10,                  # length of the pilot sequences
     'T': 1,                       # pilot reuse factor
     'p': 100,                     # uplink transmit power per UE in mW
+    'cell_side': 1000,            # side of the square cell in m
     'ASD_varphi': math.radians(10),         # Azimuth angle - Angular Standard Deviation in the local scattering model
     'ASD_theta': math.radians(15),          # Elevation angle - Angular Standard Deviation in the local scattering model
     'cl_mode': 'no_clustering',             # clustering mode from
@@ -43,6 +44,7 @@ tau_c = configuration['tau_c']
 tau_p = configuration['tau_p']
 T = configuration['T']
 p = configuration['p']
+cell_side = configuration['cell_side']
 ASD_varphi = configuration['ASD_varphi']
 ASD_theta = configuration['ASD_theta']
 
@@ -53,7 +55,7 @@ for iter in range(nbrOfSetups):
 
     # Generate one setup with UEs and APs at random locations
     gainOverNoisedB, distances, R, APpositions, UEpositions = (
-        generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta, nbrOfRealizations, seed=2))
+        generateSetup(L, K, N, cell_side, ASD_varphi, seed=2))
 
     # clustering modes ['Kmeans_locations', 'Kfootprints', 'no_clustering']
     UE_clustering \

@@ -6,7 +6,7 @@ import scipy.linalg as spalg
 import matplotlib.pyplot as plt
 import random
 
-def channelEstimates(R, nbrOfRealizations, L, K, N, tau_p, pilotIndex, p):
+def channelEstimates(R, nbrOfRealizations, L, K, N, tau_p, pilotIndex, p, mode='training'):
     """Generate the channel realizations and estimations of these channels for all the UEs in the entire network.
     The channels are assumed to be correlated Rayleigh fading and the MMSE estimator is used.
     INPUT>
@@ -31,6 +31,9 @@ def channelEstimates(R, nbrOfRealizations, L, K, N, tau_p, pilotIndex, p):
                     error between AP l and UE k (normalized by noise variance)
     """
 
+    if mode=='training':
+        np.random.seed(0)
+
     # Generate uncorrelated Rayleigh fading channel realizations
     H = np.random.randn(L*N, nbrOfRealizations, K) + 1j*np.random.randn(L*N, nbrOfRealizations, K)
 
@@ -52,6 +55,8 @@ def channelEstimates(R, nbrOfRealizations, L, K, N, tau_p, pilotIndex, p):
     # Store identity matrix of size NxN
     eyeN = np.identity(N)
 
+    if mode=='training':
+        np.random.seed(1)
     # Generate realizations of normalized noise
     Np = np.sqrt(0.5) * (np.random.randn(N, nbrOfRealizations, L, tau_p) + 1j * np.random.randn(N, nbrOfRealizations, L, tau_p))
 

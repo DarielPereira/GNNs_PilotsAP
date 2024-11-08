@@ -22,17 +22,18 @@ sigma_sf = 4
 
 p = 100
 tau_p = 10
-N = 1
-K = 100
+N = 4
+K = 2
+L=100
 
 pilotIndex = np.array([0, 0], dtype=int)
 AP_spacing = 100
 
-ASD_varphi = math.radians(5)
+ASD_varphi = math.radians(10)
 ASD_theta = math.radians(15)
 nbrOfRealizations = 1
 
-gainOverNoisedB, distances, R_, APpositions, UEpositions = generateSetup(AP_spacing, K, N, tau_p, ASD_varphi, ASD_theta,
+gainOverNoisedB, distances, R_, APpositions, UEpositions = generateSetup(L, K, N, tau_p, ASD_varphi, ASD_theta,
                                                                nbrOfRealizations, seed=1)
 L = gainOverNoisedB.shape[0]
 
@@ -64,10 +65,10 @@ for idxi, i in enumerate(range(0, 1000, 10)):
         footprint_fixed = R[:, :, :, 0].reshape(N, N*L)
         footprint_mobile = R[:, :, :, 1].reshape(N, N*L)
 
-        gainMatrix = db2pow(gainOverNoisedB.T)
-        # norm_gainMatrix = gainMatrix / (gainMatrix.max(axis=1).reshape(-1, 1))
-        # norm_gainMatrix = gainMatrix / (gainMatrix.max(axis=0).reshape(1, -1))
-        norm_gainMatrix = gainMatrix / linalg.norm(gainMatrix, axis=1).reshape(-1, 1)
+        # gainMatrix = db2pow(gainOverNoisedB.T)
+        # # norm_gainMatrix = gainMatrix / (gainMatrix.max(axis=1).reshape(-1, 1))
+        # # norm_gainMatrix = gainMatrix / (gainMatrix.max(axis=0).reshape(1, -1))
+        # norm_gainMatrix = gainMatrix / linalg.norm(gainMatrix, axis=1).reshape(-1, 1)
 
          # norm_gainMatrix = gainMatrix
 
@@ -103,33 +104,37 @@ plt.scatter(APpositions.real, APpositions.imag, c='mediumblue', marker='^', s=8)
 fig.colorbar(im0, ax=ax0)
 plt.show()
 
-fig4, ax4 = plt.subplots()
-im4 = plt.pcolormesh(x, y, Grid_NMSE[:-1, :-1])
-ax4.set_title('NMSE correlated')
-plt.scatter(UE_fixed.real, UE_fixed.imag, marker='+', color='r')
-plt.scatter(APpositions.real, APpositions.imag, c='mediumblue', marker='^', s=8)
-fig.colorbar(im4, ax=ax4)
-plt.show()
+np.savez(f'./GRAPHs/VARIABLES_SAVED/Grid',
+                 grid_product=Grid_dotProduct, UE_position=UE_fixed, AP_positions = APpositions)
 
+#
+# fig4, ax4 = plt.subplots()
+# im4 = plt.pcolormesh(x, y, Grid_NMSE[:-1, :-1])
+# ax4.set_title('NMSE correlated')
+# plt.scatter(UE_fixed.real, UE_fixed.imag, marker='+', color='r')
+# plt.scatter(APpositions.real, APpositions.imag, c='mediumblue', marker='^', s=8)
+# fig.colorbar(im4, ax=ax4)
+# plt.show()
 
-fig1, ax1 = plt.subplots()
-plt.plot(norm_gainMatrix[0].T, '*')
-plt.show()
-
-fig2 = plt.figure(figsize =(14, 9))
-ax2 = plt.axes(projection ='3d')
-ax2.scatter(APpositions.real, APpositions.imag, gainMatrix[0, :].reshape(-1, 1))
-plt.show()
-
-x = np.outer(np.linspace(0, 990, 100), np.ones(100))
-y = x.copy().T
-# Creating color map
-my_cmap = plt.get_cmap('hot')
-
-fig3 = plt.figure(figsize =(14, 9))
-ax3 = plt.axes(projection ='3d')
-ax3.plot_surface(x, y, Grid_dotProduct, cmap=my_cmap)
-plt.show()
+#
+# fig1, ax1 = plt.subplots()
+# plt.plot(norm_gainMatrix[0].T, '*')
+# plt.show()
+#
+# fig2 = plt.figure(figsize =(14, 9))
+# ax2 = plt.axes(projection ='3d')
+# ax2.scatter(APpositions.real, APpositions.imag, gainMatrix[0, :].reshape(-1, 1))
+# plt.show()
+#
+# x = np.outer(np.linspace(0, 990, 100), np.ones(100))
+# y = x.copy().T
+# # Creating color map
+# my_cmap = plt.get_cmap('hot')
+#
+# fig3 = plt.figure(figsize =(14, 9))
+# ax3 = plt.axes(projection ='3d')
+# ax3.plot_surface(x, y, Grid_dotProduct, cmap=my_cmap)
+# plt.show()
 
 print('end')
 

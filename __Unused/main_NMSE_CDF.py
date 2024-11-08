@@ -1,22 +1,18 @@
-import numpy as np
-
 from functionsSetup import *
 from functionsComputeNMSE_uplink import functionComputeNMSE_uplink
 import math
 
 from functionsClustering import cfMIMO_clustering
 from functionsPilotAlloc import pilotAssignment
-from functionsChannelEstimates import channelEstimates
-from functionsComputeSE_uplink import functionComputeSE_uplink
-from functionsUtils import save_results, load_results
-
+from __Unused.functionsChannelEstimates import channelEstimates
+from __Unused.functionsComputeSE_uplink import functionComputeSE_uplink
+from functionsUtils import save_results
 
 ##Setting Parameters
 configuration = {
-    'nbrOfSetups': 10,             # number of Monte-Carlo setups
-    'nbrOfRealizations': 3,       # number of channel realizations per setup
-    'L': 400,                       # number of APs
-    'N': 1,                     # number of antennas per AP
+    'nbrOfSetups': 50,             # number of Monte-Carlo setups
+    'nbrOfRealizations': 1,       # number of channel realizations per setup
+    'K': 100,                     # number of UEs
     'tau_c': 200,                 # length of the coherence block
     'tau_p': 10,                  # length of the pilot sequences
     'T': 1,                       # pilot reuse factor
@@ -36,8 +32,7 @@ algorithms = {
 
 nbrOfSetups = configuration['nbrOfSetups']
 nbrOfRealizations = configuration['nbrOfRealizations']
-L = configuration['L']
-N = configuration['N']
+K = configuration['K']
 tau_c = configuration['tau_c']
 tau_p = configuration['tau_p']
 T = configuration['T']
@@ -45,27 +40,27 @@ p = configuration['p']
 ASD_varphi = configuration['ASD_varphi']
 ASD_theta = configuration['ASD_theta']
 
-setups = [50, 100, 150, 200, 250, 300, 350, 400]
+setups = [(4, 100), (9, 36), (100, 4), (400, 1)]
 
 results = {
-    'Kmeans_locations': np.zeros((len(setups))),
-    'Kfootprints': np.zeros((len(setups))),
-    'DCC': np.zeros((len(setups))),
-    'DCPA': np.zeros((len(setups))),
-    'balanced_random': np.zeros((len(setups))),
-    'random': np.zeros((len(setups))),
+    'Kmeans_locations': np.zeros((len(setups), K * nbrOfSetups)),
+    'Kfootprints': np.zeros((len(setups), K * nbrOfSetups)),
+    'DCC': np.zeros((len(setups), K * nbrOfSetups)),
+    'DCPA': np.zeros((len(setups), K * nbrOfSetups)),
+    'balanced_random': np.zeros((len(setups), K * nbrOfSetups)),
+    'random': np.zeros((len(setups), K * nbrOfSetups)),
 }
 
 for idx, setup in enumerate(setups):
-    K = setup
+    L = setup[0]
+    N = setup[1]
 
     for algorithm in algorithms:
         cl_mode = algorithms[algorithm][0]
         pa_mode = algorithms[algorithm][1]
 
-        NMSEs = 0
-
-        print(f'number of UEs K: {K}')
+        print(f'number of APs L: {L}')
+        print(f'number of antennas N: {N}')
         print('Clustering mode: ' + cl_mode)
         print('Pilot allocation mode: ' + pa_mode)
 
@@ -86,13 +81,12 @@ for idx, setup in enumerate(setups):
             system_NMSE, UEs_NMSE, worst_userXpilot, best_userXpilot \
                 = functionComputeNMSE_uplink(D, tau_p, N, K, L, R, pilotIndex)
 
-            NMSEs += system_NMSE/nbrOfSetups
             print('System NMSE: {}'.format(system_NMSE))
 
-        if cl_mode in results:
-            results[cl_mode][idx] = NMSEs
-        elif pa_mode in results:
-            results[pa_mode][idx] = NMSEs
+            if cl_mode in results:
+                results[cl_mode][idx, iter * K:(iter+1) * K] = UEs_NMSE[:]
+            elif pa_mode in results:
+                results[pa_mode][idx, iter * K:(iter+1) * K] = UEs_NMSE[:]
 
-file_name = f'./GRAPHs/VARIABLES_SAVED/NMSE_L_{L}_N_{N}_NbrSetps_{nbrOfSetups}_50_400.pkl'
+file_name = f'./GRAPHs/VARIABLES_SAVED/NMSE_CDF_K_{K}_NbrSetps_{nbrOfSetups}.pkl'
 save_results(results, file_name)
