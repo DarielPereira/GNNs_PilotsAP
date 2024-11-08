@@ -1,6 +1,4 @@
-# drl-sch/Cell-Free
-
-
+# GNNs optimization of the AP and Pilot allocation in Cell-Free MIMO Systems
 
 ## Getting Started
 
