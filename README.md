@@ -12,6 +12,7 @@
     
     # To do:
         # Work on the script for generating samples for training the GNNs.
+        # Work on the script for training the GNNs.
 
  
 
