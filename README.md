@@ -10,9 +10,9 @@
             # Include the Graph_SEs_CDF.py script to generate the graphs for CDF and histogram of 
               number of serving APs. It loads only the values for the Optimal, DCC and ALL baselines. 
     
-    
     # To do:
         # Work on the script for generating samples for training the GNNs.
+ 
 
 ## Getting Started
 
