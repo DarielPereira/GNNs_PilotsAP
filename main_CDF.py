@@ -4,7 +4,7 @@ import math
 from functionsUtils import save_results
 import numpy as np
 
-from functionsAllocation import AP_PilotAssignment_UEsBLock, AP_PilotSampleGenerating_newUE
+from functionsAllocation import AP_PilotAssignment_UEsBLock, AP_Pilot_newUE
 from functionsSetup import generateSetup, insertNewUE
 from functionsChannelEstimates import channelEstimates
 from functionsComputeSE_uplink import functionComputeSE_uplink
@@ -14,7 +14,7 @@ from functionsComputeSE_uplink import functionComputeSE_uplink
 ##Setting Parameters
 configuration = {
     'nbrOfSetups': 10,             # number of communication network setups
-    'nbrOfConnectedlUEs':0,   # numnber of UEs already connected
+    'nbrOfInitiallyConnectedlUEs':0,   # numnber of UEs already connected
     'nbrOfNewUEs': 200,            # number of UEs to insert
     'nbrOfRealizations': 5,      # number of channel realizations per sample
     'L': 225,                     # number of APs
@@ -34,7 +34,7 @@ for param in configuration:
 print('###  ###\n')
 
 nbrOfSetups = configuration['nbrOfSetups']
-nbrOfConnectedlUEs = configuration['nbrOfConnectedlUEs']
+nbrOfInitiallyConnectedlUEs = configuration['nbrOfInitiallyConnectedlUEs']
 nbrOfNewUEs = configuration['nbrOfNewUEs']
 nbrOfRealizations = configuration['nbrOfRealizations']
 L = configuration['L']
@@ -60,7 +60,7 @@ results = {
 # Run over all the setups
 for setup_iter in range(nbrOfSetups):
 
-    nbrOfConnectedlUEs = 0
+    nbrOfConnectedlUEs = nbrOfInitiallyConnectedlUEs
 
     # Generate one setup with UEs and APs at random locations
     gainOverNoisedB, distances, R, APpositions, UEpositions = (
@@ -80,8 +80,8 @@ for setup_iter in range(nbrOfSetups):
         nbrOfConnectedlUEs += 1
 
         # Compute AP and pilot assignment
-        pilotIndex, D = AP_PilotSampleGenerating_newUE(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau_c,  L, N,
-                                                       M, D, pilotIndex, comb_mode)
+        pilotIndex, D = AP_Pilot_newUE(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau_c, L, N,
+                                       M, D, pilotIndex, comb_mode)
 
         # Generate channel realizations with estimates and estimation error matrices
         Hhat, H, B, C = channelEstimates(R, nbrOfRealizations, L, nbrOfConnectedlUEs, N, tau_p, pilotIndex, p)

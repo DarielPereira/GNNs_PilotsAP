@@ -10,8 +10,14 @@
             # Include the Graph_SEs_CDF.py script to generate the graphs for CDF and histogram of 
               number of serving APs. It loads only the values for the Optimal, DCC and ALL baselines. 
     
+    # 20241111:
+        # Added:
+            # Review the main_SampleGenerating.py script to generate the samples for training the GNNs.
+            # Include the script functionsGraphHandling.py to handle the buffer of training data, and
+                the functions to convert the communication matrices into the graph-structured data.
+some
     # To do:
-        # Work on the script for generating samples for training the GNNs.
+        # Work on the script for generating samples for training the GNNs (Done).
 
 
  

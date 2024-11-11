@@ -1,0 +1,68 @@
+import torch as th
+from collections import deque
+import random
+import numpy as np
+import pickle
+
+
+class SampleBuffer(object):
+
+    def __init__(self, batch_size, max_size=10000000):
+        self.storage = deque(maxlen=max_size)
+        self.batch_size = batch_size
+
+    def add(self, transition):
+        self.storage.append(transition)
+
+    def sample(self):
+        minibatch = random.sample(self.storage, self.batch_size)
+
+    def save(self, filename):
+        # Save using pickle
+        with open(filename, 'wb') as f:
+            pickle.dump(self.storage, f)
+
+    def load(self, filename):
+        # Load using pickle
+        with open(filename, 'rb') as f:
+            self.storage = pickle.load(f)
+
+
+
+def get_AP2UE_edges(D):
+    ''''
+    This function takes the AP-UE assignment matrix and returns the list of edges.
+    Every row in the tensor UE2AP_edge_list represents an edge in the graph.
+    The first column is the AP index and the second column is the UE index.
+    '''
+
+    AP2UE_edges = th.tensor(np.transpose(np.nonzero(D)))
+
+    return AP2UE_edges
+
+
+def get_Pilot2UE_edges(pilotIndex):
+    ''''
+    This function takes the pilot allocation and returns the list of edges.
+    Every row in the tensor UE2AP_edge_list represents an edge in the graph.
+    The first column is the AP index and the second column is the UE index.
+    '''
+
+    Pilot2UE_edges = th.zeros((len(pilotIndex), 2))
+
+    for idx in range(len(pilotIndex)):
+        Pilot2UE_edges[idx, 0] = pilotIndex[idx]
+        Pilot2UE_edges[idx, 1] = idx
+
+    return Pilot2UE_edges
+
+def get_oneHot_bestPilot(best_pilot_sample, tau_p):
+    ''''
+    This function takes the best pilot allocation and returns the one-hot encoding of the best pilot.
+    '''
+
+    one_hot_best_pilot = th.zeros((tau_p))
+
+    one_hot_best_pilot[int(best_pilot_sample)] = 1
+
+    return one_hot_best_pilot

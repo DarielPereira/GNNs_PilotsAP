@@ -1,21 +1,25 @@
 from functionsSetup import *
 from functionsComputeNMSE_uplink import functionComputeNMSE_uplink
 import math
+from functionsUtils import save_results
+import numpy as np
+import torch as th
 
-
-from functionsAllocation import AP_PilotAssignment_UEsBLock, AP_PilotSampleGenerating_newUE
+from functionsAllocation import AP_PilotAssignment_UEsBLock, AP_Pilot_newUE, AP_Pilot_GeneratingSamples
 from functionsSetup import generateSetup, insertNewUE
+from functionsGraphHandling import SampleBuffer, get_AP2UE_edges, get_Pilot2UE_edges, get_oneHot_bestPilot
 from functionsChannelEstimates import channelEstimates
 from functionsComputeSE_uplink import functionComputeSE_uplink
 
 
+
 ##Setting Parameters
 configuration = {
-    'nbrOfSetups': 1,             # number of communication network setups
-    'nbrOfConnectedlUEs':0,   # numnber of UEs already connected
-    'nbrOfNewUEs': 150,            # number of UEs to insert
+    'nbrOfSetups': 10,             # number of communication network setups
+    'nbrOfInitiallyConnectedlUEs': 0,   # numnber of UEs already connected
+    'nbrOfNewUEs': 200,            # number of UEs to insert
     'nbrOfRealizations': 5,      # number of channel realizations per sample
-    'L': 196,                     # number of APs
+    'L': 225,                     # number of APs
     'N': 1,                       # number of antennas per AP
     'tau_c': 200,                 # length of the coherence block
     'tau_p': 10,                  # length of the pilot sequences
@@ -32,7 +36,7 @@ for param in configuration:
 print('###  ###\n')
 
 nbrOfSetups = configuration['nbrOfSetups']
-nbrOfConnectedlUEs = configuration['nbrOfConnectedlUEs']
+nbrOfInitiallyConnectedlUEs = configuration['nbrOfInitiallyConnectedlUEs']
 nbrOfNewUEs = configuration['nbrOfNewUEs']
 nbrOfRealizations = configuration['nbrOfRealizations']
 L = configuration['L']
@@ -45,19 +49,21 @@ ASD_varphi = configuration['ASD_varphi']
 M = configuration['M']
 comb_mode = configuration['comb_mode']
 
-# TO STORE DATA
-# Matrix with the correlation matrices
+# Create the sample storage buffer
+sampleBuffer = SampleBuffer(batch_size=10)
 
 # Run over all the setups
 for setup_iter in range(nbrOfSetups):
 
+    # set the initial number of connected UEs for each setup    
+    nbrOfConnectedlUEs = nbrOfInitiallyConnectedlUEs
+
     # Generate one setup with UEs and APs at random locations
     gainOverNoisedB, distances, R, APpositions, UEpositions = (
-        generateSetup(L, nbrOfConnectedlUEs, N, cell_side, ASD_varphi, seed=2))
+        generateSetup(L, nbrOfConnectedlUEs, N, cell_side, ASD_varphi, seed=setup_iter))
 
     # Compute AP and pilot assignment
     pilotIndex, D = AP_PilotAssignment_UEsBLock(R, gainOverNoisedB, tau_p, L, N, mode='DCC')
-
 
     # Run over the samples for each setup
     for newUE_idx in range(nbrOfNewUEs):
@@ -70,44 +76,32 @@ for setup_iter in range(nbrOfSetups):
         nbrOfConnectedlUEs += 1
 
         # Compute AP and pilot assignment
-        pilotIndex, D = AP_PilotSampleGenerating_newUE(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau_c,  L, N,
-                                                       M, D, pilotIndex, comb_mode)
+        pilotIndex, D, D_sample, R_sample, pilotIndex_sample, best_pilot_sample, best_APassignment_sample \
+            = AP_Pilot_GeneratingSamples(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau_c, L, N,
+                                       M, D, pilotIndex, comb_mode)
 
-        # Generate channel realizations with estimates and estimation error matrices
-        Hhat, H, B, C = channelEstimates(R, nbrOfRealizations, L, nbrOfConnectedlUEs, N, tau_p, pilotIndex, p)
+        # Convert the data to graph samples
+        # Ap2UE edges
+        AP2UE_edges = get_AP2UE_edges(D_sample)
+        # Pilot2UE edges
+        Pilot2UE_edges = get_Pilot2UE_edges(pilotIndex_sample)
+        # One-hot encoding torch of the best pilot
+        oneHot_bestPilot = get_oneHot_bestPilot(best_pilot_sample, tau_p)
+        # Best pilot assignment torch
+        best_APassignment = th.tensor(best_APassignment_sample)
+        # R matrix torch for the previously connected UEs
+        R_features = th.tensor(R_sample[:, :, :, :-1])
+        # R matrix torch for the new UE
+        R_newUE = th.tensor(R_sample[:, :, :, -1])
 
-    # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
-    SE_MMSE, SE_P_RZF, SE_MR = functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p,
-                                       nbrOfRealizations, N, nbrOfConnectedlUEs, L, p)
-
-    print('Sum SE Optimal: ', np.sum(SE_MR))
-
-
-    pilotIndex_DCC, D_DCC = AP_PilotAssignment_UEsBLock(R, gainOverNoisedB, tau_p, L, N, mode='DCC')
-
-    # Generate channel realizations with estimates and estimation error matrices
-    Hhat, H, B, C = channelEstimates(R, nbrOfRealizations, L, nbrOfConnectedlUEs, N, tau_p, pilotIndex_DCC, p)
-
-    # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
-    SE_MMSE_DCC, SE_P_RZF_DCC, SE_MR_DCC = functionComputeSE_uplink(Hhat, H, D_DCC, C, tau_c, tau_p,
-                                   nbrOfRealizations, N, nbrOfConnectedlUEs, L, p)
-
-    D_ALL = np.ones((L, nbrOfConnectedlUEs))
-
-    # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
-    SE_MMSE_ALL, SE_P_RZF_ALL, SE_MR_ALL = functionComputeSE_uplink(Hhat, H, D_ALL, C, tau_c, tau_p,
-                                                                    nbrOfRealizations, N, nbrOfConnectedlUEs, L, p)
-
-
-    print('Sum SE DCC: ', np.sum(SE_MR_DCC))
-    print('Sum SE ALL: ', np.sum(SE_MR_ALL))
-
-
-    print('Ave. number of serving APs Optimal: ', np.mean(np.sum(D, axis=0)))
-    print('Ave. number of serving APs DCC: ', np.mean(np.sum(D_DCC, axis=0)))
-    print('Ave. number of serving APs ALL: ', np.mean(np.sum(D_ALL, axis=0)))
+        # Store the tuple samples in the buffer
+        sampleBuffer.add((AP2UE_edges, Pilot2UE_edges, oneHot_bestPilot, best_APassignment, R_features, R_newUE))
 
 
 
+file_name = (
+        f'./TRAININGDATA/SE_Comb_'+comb_mode+f'_L_{L}_N_{N}_M_{M}_taup_{tau_p}_NbrSamp_{nbrOfSetups*nbrOfNewUEs}.pkl')
+
+sampleBuffer.save(file_name)
 
 
