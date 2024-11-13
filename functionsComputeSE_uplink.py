@@ -64,6 +64,7 @@ def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, nbrOfRealizations, N, 
 
     # Prepare to store simulation results
     SE_MMSE = np.zeros((K, 1), dtype=complex)
+    SE_P_MMSE = np.zeros((K, 1), dtype=complex)
     SE_P_RZF = np.zeros((K, 1), dtype=complex)
     SE_MR = np.zeros((K, 1), dtype=complex)
 
@@ -113,6 +114,7 @@ def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, nbrOfRealizations, N, 
                 SE_MMSE[k] = SE_MMSE[k] + prelogFactor * (np.log2(1 + numerator / denominator)).real / nbrOfRealizations
 
 
+
                 # Compute P-RZF combining according to 5.18
                 v = p * (alg.inv(
                     p * (Hhatallj_active[:, servedUEs] @ Hhatallj_active[:, servedUEs].conjugate().T) + np.identity(
@@ -148,9 +150,33 @@ def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, nbrOfRealizations, N, 
                     np.log2(1 + numerator / denominator)).real / nbrOfRealizations
 
 
+
+
+                # Compute P-MMSE combining according 5.16
+                v = p * (alg.inv(p * (Hhatallj_active[:, servedUEs] @ Hhatallj_active[:, servedUEs].conjugate().T) +
+                                 p * C_tot_blk_partial + np.identity(La * N)) @ Hhatallj_active[:, k])
+
+                # Compute numerator and denominator of instantaneous SINR in 5.5
+                numerator = p * np.abs(v.conjugate().T @ Hhatallj_active[:, k]) ** 2
+                denominator = p * alg.norm(v.conjugate().T @ Hhatallj_active) ** 2 + v.conjugate().T @ (
+                        p * C_tot_blk + np.identity(La * N)) @ v - numerator
+
+                # Compute numerator and denominator of instantaneous SINR in 5.50
+                numerator_gen = p * np.abs(v.conjugate().T @ Hallj_active[:, k]) ** 2
+                denominator_gen = p * alg.norm(
+                    v.conjugate().T @ Hallj_active) ** 2 + v.conjugate().T @ v - numerator_gen
+
+                # Update the SE by computing the instantaneous reward for one channel realization
+                # according to 5.4
+                SE_P_MMSE[k] = SE_P_MMSE[k] + prelogFactor * (
+                    np.log2(1 + numerator / denominator)).real / nbrOfRealizations
+
+
+
             else:
                 SE_MMSE[k] = SE_MMSE[k] + 0
                 SE_P_RZF[k] = SE_P_RZF[k] + 0
                 SE_MR[k] = SE_MR[k] + 0
+                SE_P_MMSE[k] = SE_P_MMSE[k] + 0
 
-    return SE_MMSE, SE_P_RZF, SE_MR
+    return SE_MMSE, SE_P_RZF, SE_MR, SE_P_MMSE

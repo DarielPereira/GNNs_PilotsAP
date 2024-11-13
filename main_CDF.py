@@ -87,7 +87,7 @@ for setup_iter in range(nbrOfSetups):
         Hhat, H, B, C = channelEstimates(R, nbrOfRealizations, L, nbrOfConnectedlUEs, N, tau_p, pilotIndex, p)
 
     # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
-    SE_MMSE, SE_P_RZF, SE_MR = functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p,
+    SE_MMSE, SE_P_RZF, SE_MR, SE_P_MMSE = functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p,
                                        nbrOfRealizations, N, nbrOfConnectedlUEs, L, p)
 
     pilotIndex_DCC, D_DCC = AP_PilotAssignment_UEsBLock(R, gainOverNoisedB, tau_p, L, N, mode='DCC')
@@ -96,18 +96,14 @@ for setup_iter in range(nbrOfSetups):
     Hhat, H, B, C = channelEstimates(R, nbrOfRealizations, L, nbrOfConnectedlUEs, N, tau_p, pilotIndex_DCC, p)
 
     # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
-    SE_MMSE_DCC, SE_P_RZF_DCC, SE_MR_DCC = functionComputeSE_uplink(Hhat, H, D_DCC, C, tau_c, tau_p,
+    SE_MMSE_DCC, SE_P_RZF_DCC, SE_MR_DCC, SE_P_MMSE_DCC = functionComputeSE_uplink(Hhat, H, D_DCC, C, tau_c, tau_p,
                                    nbrOfRealizations, N, nbrOfConnectedlUEs, L, p)
 
     D_ALL = np.ones((L, nbrOfConnectedlUEs))
 
     # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
-    SE_MMSE_ALL, SE_P_RZF_ALL, SE_MR_ALL = functionComputeSE_uplink(Hhat, H, D_ALL, C, tau_c, tau_p,
+    SE_MMSE_ALL, SE_P_RZF_ALL, SE_MR_ALL, SE_P_MMSE_ALL = functionComputeSE_uplink(Hhat, H, D_ALL, C, tau_c, tau_p,
                                                                     nbrOfRealizations, N, nbrOfConnectedlUEs, L, p)
-
-    print('Sum SE Optimal: ', np.sum(SE_MR))
-    print('Sum SE DCC: ', np.sum(SE_MR_DCC))
-    print('Sum SE ALL: ', np.sum(SE_MR_ALL))
 
 
     print('Ave. number of serving APs Optimal: ', np.mean(np.sum(D, axis=0)))
@@ -126,6 +122,10 @@ for setup_iter in range(nbrOfSetups):
             results['ALL_nbrServingAPs'][setup_iter * nbrOfNewUEs:(setup_iter + 1) * nbrOfNewUEs] = (
                 np.sum(D_ALL, axis=0))
 
+            print('Sum SE Optimal: ', np.sum(SE_MR))
+            print('Sum SE DCC: ', np.sum(SE_MR_DCC))
+            print('Sum SE ALL: ', np.sum(SE_MR_ALL))
+
         case 'MMSE':
             results['Optimal_SE'][setup_iter * nbrOfNewUEs:(setup_iter + 1) * nbrOfNewUEs] = SE_MMSE[:].flatten()
             results['DCC_SE'][setup_iter * nbrOfNewUEs:(setup_iter + 1) * nbrOfNewUEs] = SE_MMSE_DCC[:].flatten()
@@ -136,6 +136,10 @@ for setup_iter in range(nbrOfSetups):
                 np.sum(D_DCC, axis=0))
             results['ALL_nbrServingAPs'][setup_iter * nbrOfNewUEs:(setup_iter + 1) * nbrOfNewUEs] = (
                 np.sum(D_ALL, axis=0))
+
+            print('Sum SE Optimal: ', np.sum(SE_MMSE))
+            print('Sum SE DCC: ', np.sum(SE_MMSE_DCC))
+            print('Sum SE ALL: ', np.sum(SE_MMSE_ALL))
 
 file_name = f'./GRAPHs/VARIABLES_SAVED/SE_CDF_Comb_'+comb_mode+f'_NbrSetups_{nbrOfSetups}.pkl'
 save_results(results, file_name)

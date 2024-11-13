@@ -16,92 +16,6 @@ from functionsChannelEstimates import channelEstimates
 from functionsComputeSE_uplink import functionComputeSE_uplink
 
 
-def AP_PilotAssignment_newUE(R, gainOverNoisedB, tau_p, L, N, old_pilotIndex, mode):
-    """Use clustering information to assign pilots to the UEs. UEs in the same cluster should be assigned
-    different pilots
-    INPUT>
-    :param ...
-    OUTPUT>
-    pilotIndex: vector whose entry pilotIndex[k] contains the index of pilot assigned to UE k
-    """
-
-    K = gainOverNoisedB.shape[1]
-
-    # to store pilot assignment
-    pilotIndex = np.hstack((old_pilotIndex, [-1]))
-
-    # to store AP assignment
-    D = np.zeros((L, K))
-
-    # check for PA mode
-    match mode:
-        case 'random':
-            print('implement random')
-
-        case 'DCC':
-            # Determine the master AP for UE k by looking for the AP with best channel condition
-            master = np.argmax(gainOverNoisedB[:, -1])
-
-            # Set the master AP as serving AP
-            D[master, -1] = 1
-
-            if K - 1 <= tau_p - 1:  # Assign orthogonal pilots to the first tau_p UEs
-                pilotIndex[-1] = K - 1
-
-            else:  # Assign pilot for remaining users
-
-                # Compute received power to the master AP from each pilot
-                pilotInterference = np.zeros(tau_p)
-
-                for t in range(tau_p):
-                    pilotInterference[t] = np.sum(db2pow(gainOverNoisedB[master, :-1][pilotIndex[:-1] == t]))
-
-                # Find the pilot with least received power
-                bestPilot = np.argmin(pilotInterference)
-                pilotIndex[-1] = bestPilot
-
-            # Guarantee that each UE sierved at least by the master AP
-            for k in range(K - 1):
-                # Determine the master AP for UE k by looking for the AP with best channel condition
-                master = np.argmax(gainOverNoisedB[:, k])
-
-                # Set the master AP as serving AP
-                D[master, k] = 1
-
-            # Each AP serves the UE with the strongest channel condition on each of the pilots
-            for l in range(L):
-                for t in range(tau_p):
-                    pilotUEs, = np.where(pilotIndex == t)
-                    if len(pilotUEs) > 0:
-                        UEindex = np.argmax(gainOverNoisedB[l, pilotIndex == t])
-                        D[l, pilotUEs[UEindex]] = 1
-
-        case 'ALL':
-
-            # Determine the master AP for UE k by looking for the AP with best channel condition
-            master = np.argmax(gainOverNoisedB[:, -1])
-
-            # Set the master AP as serving AP
-            D[master, -1] = 1
-
-            if K - 1 <= tau_p - 1:  # Assign orthogonal pilots to the first tau_p UEs
-                pilotIndex[-1] = K - 1
-
-            else:  # Assign pilot for remaining users
-
-                # Compute received power to the master AP from each pilot
-                pilotInterference = np.zeros(tau_p)
-
-                for t in range(tau_p):
-                    pilotInterference[t] = np.sum(db2pow(gainOverNoisedB[master, :-1][pilotIndex[:-1] == t]))
-
-                # Find the pilot with least received power
-                bestPilot = np.argmin(pilotInterference)
-                pilotIndex[-1] = bestPilot
-
-            D = np.ones((L, K))
-
-    return pilotIndex, D
 
 
 def AP_PilotAssignment_UEsBLock(R, gainOverNoisedB, tau_p, L, N, mode):
@@ -263,7 +177,7 @@ def AP_Pilot_newUE(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau_c, L, N,
                 D_small[:, -1] = APassignment
 
                 # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
-                SE_MMSE, SE_P_RZF, SE_MR = functionComputeSE_uplink(Hhat, H, D_small, C, tau_c, tau_p,
+                SE_MMSE, SE_P_RZF, SE_MR, SE_P_MMSE = functionComputeSE_uplink(Hhat, H, D_small, C, tau_c, tau_p,
                                                             nbrOfRealizations, N, K_small, M, p)
                 match comb_mode:
                     case 'MMSE':
@@ -272,6 +186,8 @@ def AP_Pilot_newUE(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau_c, L, N,
                         SE = SE_P_RZF
                     case 'MR':
                         SE = SE_MR
+                    case 'P_MMSE':
+                        SE = SE_P_MMSE
                     case _:
                         print('ERROR: Combining mismatching')
                         SE = 0
@@ -314,7 +230,7 @@ def AP_Pilot_newUE(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau_c, L, N,
             D_small[:, 0] = APassignment
 
             # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
-            SE_MMSE, SE_P_RZF, SE_MR = functionComputeSE_uplink(Hhat, H, D_small, C, tau_c, tau_p,
+            SE_MMSE, SE_P_RZF, SE_MR, SE_P_MMSE = functionComputeSE_uplink(Hhat, H, D_small, C, tau_c, tau_p,
                                                         nbrOfRealizations, N, K_small, M, p)
 
             match comb_mode:
@@ -324,6 +240,8 @@ def AP_Pilot_newUE(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau_c, L, N,
                     SE = SE_P_RZF
                 case 'MR':
                     SE = SE_MR
+                case 'P_MMSE':
+                    SE = SE_P_MMSE
                 case _:
                     print('ERROR: Combining mismatching')
                     SE = 0
@@ -421,7 +339,7 @@ def AP_Pilot_GeneratingSamples(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, 
                 D_small[:, -1] = APassignment
 
                 # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
-                SE_MMSE, SE_P_RZF, SE_MR = functionComputeSE_uplink(Hhat, H, D_small, C, tau_c, tau_p,
+                SE_MMSE, SE_P_RZF, SE_MR, SE_P_MMSE = functionComputeSE_uplink(Hhat, H, D_small, C, tau_c, tau_p,
                                                             nbrOfRealizations, N, K_small, M, p)
                 match comb_mode:
                     case 'MMSE':
@@ -430,6 +348,8 @@ def AP_Pilot_GeneratingSamples(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, 
                         SE = SE_P_RZF
                     case 'MR':
                         SE = SE_MR
+                    case 'P_MMSE':
+                        SE = SE_P_MMSE
                     case _:
                         print('ERROR: Combining mismatching')
                         SE = 0
@@ -472,7 +392,7 @@ def AP_Pilot_GeneratingSamples(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, 
             D_small[:, 0] = APassignment
 
             # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
-            SE_MMSE, SE_P_RZF, SE_MR = functionComputeSE_uplink(Hhat, H, D_small, C, tau_c, tau_p,
+            SE_MMSE, SE_P_RZF, SE_MR, SE_P_MMSE = functionComputeSE_uplink(Hhat, H, D_small, C, tau_c, tau_p,
                                                         nbrOfRealizations, N, K_small, M, p)
 
             match comb_mode:
@@ -482,6 +402,8 @@ def AP_Pilot_GeneratingSamples(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, 
                     SE = SE_P_RZF
                 case 'MR':
                     SE = SE_MR
+                case 'P_MMSE':
+                    SE = SE_P_MMSE
                 case _:
                     print('ERROR: Combining mismatching')
                     SE = 0
@@ -507,3 +429,91 @@ def AP_Pilot_GeneratingSamples(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, 
 
     return pilotIndex, D, D_small[:, :-1], R_small, pilotIndex_small[:-1], best_pilot, best_APassignment
 
+
+
+def AP_Pilot_newUE_Benchmarks(R, gainOverNoisedB, tau_p, L, N, old_pilotIndex, mode):
+    """Use clustering information to assign pilots to the UEs. UEs in the same cluster should be assigned
+    different pilots
+    INPUT>
+    :param ...
+    OUTPUT>
+    pilotIndex: vector whose entry pilotIndex[k] contains the index of pilot assigned to UE k
+    """
+
+    K = gainOverNoisedB.shape[1]
+
+    # to store pilot assignment
+    pilotIndex = np.hstack((old_pilotIndex, [-1]))
+
+    # to store AP assignment
+    D = np.zeros((L, K))
+
+    # check for PA mode
+    match mode:
+        case 'random':
+            print('implement random')
+
+        case 'DCC':
+            # Determine the master AP for UE k by looking for the AP with best channel condition
+            master = np.argmax(gainOverNoisedB[:, -1])
+
+            # Set the master AP as serving AP
+            D[master, -1] = 1
+
+            if K - 1 <= tau_p - 1:  # Assign orthogonal pilots to the first tau_p UEs
+                pilotIndex[-1] = K - 1
+
+            else:  # Assign pilot for remaining users
+
+                # Compute received power to the master AP from each pilot
+                pilotInterference = np.zeros(tau_p)
+
+                for t in range(tau_p):
+                    pilotInterference[t] = np.sum(db2pow(gainOverNoisedB[master, :-1][pilotIndex[:-1] == t]))
+
+                # Find the pilot with least received power
+                bestPilot = np.argmin(pilotInterference)
+                pilotIndex[-1] = bestPilot
+
+            # Guarantee that each UE served at least by the master AP
+            for k in range(K - 1):
+                # Determine the master AP for UE k by looking for the AP with best channel condition
+                master = np.argmax(gainOverNoisedB[:, k])
+
+                # Set the master AP as serving AP
+                D[master, k] = 1
+
+            # Each AP serves the UE with the strongest channel condition on each of the pilots
+            for l in range(L):
+                for t in range(tau_p):
+                    pilotUEs, = np.where(pilotIndex == t)
+                    if len(pilotUEs) > 0:
+                        UEindex = np.argmax(gainOverNoisedB[l, pilotIndex == t])
+                        D[l, pilotUEs[UEindex]] = 1
+
+        case 'ALL':
+
+            # Determine the master AP for UE k by looking for the AP with best channel condition
+            master = np.argmax(gainOverNoisedB[:, -1])
+
+            # Set the master AP as serving AP
+            D[master, -1] = 1
+
+            if K - 1 <= tau_p - 1:  # Assign orthogonal pilots to the first tau_p UEs
+                pilotIndex[-1] = K - 1
+
+            else:  # Assign pilot for remaining users
+
+                # Compute received power to the master AP from each pilot
+                pilotInterference = np.zeros(tau_p)
+
+                for t in range(tau_p):
+                    pilotInterference[t] = np.sum(db2pow(gainOverNoisedB[master, :-1][pilotIndex[:-1] == t]))
+
+                # Find the pilot with least received power
+                bestPilot = np.argmin(pilotInterference)
+                pilotIndex[-1] = bestPilot
+
+            D = np.ones((L, K))
+
+    return pilotIndex, D

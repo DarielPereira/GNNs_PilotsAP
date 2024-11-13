@@ -15,7 +15,12 @@
             # Review the main_SampleGenerating.py script to generate the samples for training the GNNs.
             # Include the script functionsGraphHandling.py to handle the buffer of training data, and
                 the functions to convert the communication matrices into the graph-structured data.
-some
+
+    # 20241113:
+        # Added:
+            # Include the P_MMSE combining in the functionsComputeSE_uplink.py script, and included in the
+                flow of the main_CDF.py and functionsAPAllocation.py scripts.
+
     # To do:
         # Work on the script for generating samples for training the GNNs (Done).
 
