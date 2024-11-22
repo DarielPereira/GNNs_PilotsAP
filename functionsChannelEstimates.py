@@ -37,13 +37,6 @@ def channelEstimates(R, nbrOfRealizations, L, K, N, tau_p, pilotIndex, p, mode='
     # Generate uncorrelated Rayleigh fading channel realizations
     H = np.random.randn(L*N, nbrOfRealizations, K) + 1j*np.random.randn(L*N, nbrOfRealizations, K)
 
-# ######
-#     from scipy.io import loadmat
-#     mat_data = loadmat('mat.mat')
-#     # Extract the 4D matrix
-#     H = mat_data['H']
-# #####
-
     # Go through all channels and apply the spatial correlation matrices
     for l in range(L):
         for k in range(K):
@@ -59,15 +52,6 @@ def channelEstimates(R, nbrOfRealizations, L, K, N, tau_p, pilotIndex, p, mode='
         np.random.seed(1)
     # Generate realizations of normalized noise
     Np = np.sqrt(0.5) * (np.random.randn(N, nbrOfRealizations, L, tau_p) + 1j * np.random.randn(N, nbrOfRealizations, L, tau_p))
-
-# ######
-#     from scipy.io import loadmat
-#     mat_data = loadmat('Np.mat')
-#     # Extract the 4D matrix
-#     Np = mat_data['Np']
-# #####
-
-
 
     # Prepare to store results
     Hhat = np.zeros((L*N, nbrOfRealizations, K), dtype=complex)

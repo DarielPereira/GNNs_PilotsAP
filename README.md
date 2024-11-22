@@ -21,8 +21,25 @@
             # Include the P_MMSE combining in the functionsComputeSE_uplink.py script, and included in the
                 flow of the main_CDF.py and functionsAPAllocation.py scripts.
 
+    # 20241122:
+        # Added:
+            # Include the ToyModel_iCSI.py script to study the behavior of small cell-free
+                networks regarding AP assignment. It include the benchmarks: 
+                    -"allUEs": the AP assignment of all UEs is updated at each time
+                    instant by considering the information regarding all the remaining 
+                    UEs and all the APs.
+                    -"allUEs_local": the same as "allUEs" but only the information regarding
+                    the best serving APs and the UEs served by these APs is considered.
+                    -"newUE": at each time instant, only the AP assignment of the new UEs 
+                    is updated.
+                    -"newUE_local": the same as "newUE" but only the information regarding
+                    the best serving APs and the UEs served by these APs is considered.
+            # Include the folder ToyModelsData to store the results of the ToyModel_iCSI.py 
+                script and generate the graphs.
+
     # To do:
         # Work on the script for generating samples for training the GNNs (Done).
+        # Create a new script for generating training samples that considers the AP assignment.
 
 
  

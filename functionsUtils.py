@@ -82,18 +82,33 @@ def drawingSetup(UEpositions, APpositions, colorIndex, title, squarelength):
     :param squarelength: side of the cell
     """
 
+    fig = plt.figure()
+
     # create a custom color palette for up to 10 orthogonal pilots
-    custom_colors = np.array(['red', 'dodgerblue', 'green', 'orchid', 'aqua', 'orange', 'lime', 'black', 'pink', 'yellow']*10)
+    custom_colors = np.array(['magenta', 'green', 'cyan', 'red', 'blue', 'yellow', 'lime', 'black', 'pink']*10)
 
     # pilot assignment graph
-    plt.scatter(UEpositions.real, UEpositions.imag, c=custom_colors[colorIndex], marker='*')
-    plt.scatter(APpositions.real, APpositions.imag, c='mediumblue', marker='^', s=8)
+    plt.scatter(UEpositions.real, UEpositions.imag, c=custom_colors[colorIndex], marker='*', s=24)
+    plt.scatter(APpositions.real, APpositions.imag, c='orange', marker='^', s=18)
     plt.title(title)
     for i, txt in enumerate(range(len(UEpositions))):
-        plt.annotate(txt, (UEpositions[i].real, UEpositions[i].imag))
-    plt.xlim([0, squarelength])
-    plt.ylim([0, squarelength])
+        plt.annotate(txt, (UEpositions[i].real, UEpositions[i].imag), fontsize=12)
+    for i, txt in enumerate(range(len(APpositions))):
+        plt.annotate(txt, (APpositions[i].real, APpositions[i].imag), fontsize=12, c='mediumblue')
+    plt.xlim([0, squarelength+20])
+    plt.ylim([0, squarelength+20])
+    plt.legend(['UEs', 'APs'])
+    plt.xlabel(r'position [m]', size=15)
+    plt.ylabel(r'position [m]', size=15)
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='Times New Roman')
     plt.show()
+
+    image_format = 'jpeg'
+    image_name = 'Setup_seed0.jpeg'
+    fig.savefig(image_name, format=image_format, dpi=400)
+
+
 
 def drawing3Dvectors(UEvectorMatrix, colorIndex, title):
     # # create a custom color palette for up to 10 orthogonal pilots
