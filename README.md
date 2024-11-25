@@ -37,9 +37,18 @@
             # Include the folder ToyModelsData to store the results of the ToyModel_iCSI.py 
                 script and generate the graphs.
 
-    # To do:
+    # 20241125:
+        # Added:
+            # Include the AP_SampleGenerating.py script to generate the samples for training the GNNs: 
+                    -It generates random setups with a fixed number of APs and a random number of UEs that follows
+                    a uniform distribution within a specified range.
+                    -The samples are composed of a target UE and the I UEs which are relevant for the M APs relevant
+                    for the target UE. For every UE we get a vector of features comprising the channel gains to the 
+                    M APs.
+        # To do:
         # Work on the script for generating samples for training the GNNs (Done).
-        # Create a new script for generating training samples that considers the AP assignment.
+        # Create a new script for generating training samples that considers only the AP assignment (Done).
+        # Implement the methods for creating and training the GNNs.
 
 
  

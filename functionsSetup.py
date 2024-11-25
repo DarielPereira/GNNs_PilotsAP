@@ -33,7 +33,7 @@ def generateSetup(L, K, N, cell_side, ASD_varphi, seed = 0):
                       Ap l and UE k
     """
 
-    np.random.seed(seed)
+    # np.random.seed(seed)
 
     # Simulation Setup Configuration Parameters
     squarelength = cell_side    # length of one side the coverage area in m
