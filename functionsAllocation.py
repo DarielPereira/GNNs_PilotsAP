@@ -521,8 +521,8 @@ def AP_Pilot_newUE_Benchmarks(R, gainOverNoisedB, tau_p, L, N, old_pilotIndex, m
 
 
 
-def toyModel_AP_Pilot_newUE(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau_c, K, L, N, M,
-                   old_D, old_pilotIndex, comb_mode, update_mode, csi_mode):
+def toyModel_AP_newUE(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau_c, K, L, N, M,
+                      old_D, old_pilotIndex, comb_mode, update_mode, csi_mode):
     """Use clustering information to assign pilots to the UEs. UEs in the same cluster should be assigned
     different pilots
     INPUT>
@@ -994,3 +994,160 @@ def toyModel_AP_Pilot_newUE(p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau
 
 
     return pilotIndex, D, best_sum_SE, best_SE
+
+
+
+
+def PilotAssignment(R, gainOverNoisedB, tau_p, L, K, N, mode):
+    """Compute the pilot assignment for a set of UEs
+    INPUT>
+    :param R: matrix with dimensions (N, N, L, K) containing the channel correlation matrices
+    :param gainOverNoisedB: matrix with dimensions (L, K) containing the channel gains
+    :param tau_p: number of pilots
+    :param L: number of APs
+    :param K: number of UEs
+    :param N: number of antennas at the APs
+    :param mode: pilot assignment mode
+    OUTPUT>
+    pilotIndex: vector whose entry pilotIndex[k] contains the index of pilot assigned to UE k
+    """
+
+    # to store pilot assignment
+    pilotIndex = -1 * np.ones((K), int)
+
+    # check for PA mode
+    match mode:
+        case 'random':
+            print('implement random')
+
+        case 'DCC':
+
+            # Determine the pilot assignment
+            for k in range(0, K):
+
+                # Determine the master AP for UE k by looking for the AP with best channel condition
+                master = np.argmax(gainOverNoisedB[:, k])
+
+                if k <= tau_p - 1:  # Assign orthogonal pilots to the first tau_p UEs
+                    pilotIndex[k] = k
+
+                else:  # Assign pilot for remaining users
+
+                    # Compute received power to the master AP from each pilot
+                    pilotInterference = np.zeros(tau_p)
+
+                    for t in range(tau_p):
+                        pilotInterference[t] = np.sum(db2pow(gainOverNoisedB[master, :k][pilotIndex[:k] == t]))
+
+                    # Find the pilot with least received power
+                    bestPilot = np.argmin(pilotInterference)
+                    pilotIndex[k] = bestPilot
+
+    return pilotIndex
+
+
+def AP_GeneratingSamples(buffer, p, nbrOfRealizations, R, gainOverNoisedB, tau_p, tau_c, Hhat, H, B, C, L, K, N, M, I,
+                   comb_mode, potentialAPs_mode, relevantUEs_mode):
+    """Use clustering information to assign pilots to the UEs. UEs in the same cluster should be assigned
+    different pilots
+    INPUT>
+    :param ...
+    OUTPUT>
+    pilotIndex: vector whose entry pilotIndex[k] contains the index of pilot assigned to UE k
+    """
+
+    # Run over all the UEs
+    for k in range(K):
+
+        # Select the set of M potential APs for UE k
+        match potentialAPs_mode:
+            case 'base':
+                # Get the M best serving APs to the new UE
+                potentialAPs_index = np.argsort(gainOverNoisedB[:, k])[-M:][::-1]
+
+        # Select the set of relevant UEs for the APs
+        match relevantUEs_mode:
+            case 'base':
+                servedUEs = []
+                for l in potentialAPs_index:
+                    servedUEs.append(np.argsort(gainOverNoisedB[l, :])[-(min(K, I)):][::-1])
+
+                # Get a list with all the UEs served by these APs
+                relevantUEs_index = list(set({}).union(*servedUEs))
+
+        # Include k at the end of the list of relevant UEs
+        if k in relevantUEs_index:
+            relevantUEs_index.remove(k)
+
+        relevantUEs_index.append(k)
+
+        # The number of UEs in the graph on interest
+        K_small = len(relevantUEs_index)
+
+        # compute all the feasible pilot assignments
+        feasible_APassignments = np.array(list(itertools.product([0, 1], repeat=M)))
+
+        # To store information regarding to the potential APs and the relevant UEs
+        D_small = np.zeros((M, K_small))
+        R_small = np.zeros((N, N, M, K_small), dtype=complex)
+        Hhat_small = np.zeros((M * N, nbrOfRealizations, K_small), dtype=complex)
+        H_small = np.zeros((M * N, nbrOfRealizations, K_small), dtype=complex)
+        B_small = np.zeros((R_small.shape), dtype=complex)
+        C_small = np.zeros((R_small.shape), dtype=complex)
+        gainOverNoisedB_small = np.zeros((M, K_small))
+
+        # To fill the network information matrices
+        # Go over the best serving APs
+        for idx in range(M):
+            # Go over the served UEs
+            for jdx in range(K_small):
+                # Get the reduced versions of R and D matrices
+                R_small[:, :, idx, jdx] = R[:, :, potentialAPs_index[idx], relevantUEs_index[jdx]]
+                Hhat_small[idx * N:(idx + 1) * N, :, jdx] \
+                    = Hhat[potentialAPs_index[idx] * N:(potentialAPs_index[idx] + 1) * N, :, relevantUEs_index[jdx]]
+                H_small[idx * N:(idx + 1) * N, :, jdx] \
+                    = H[potentialAPs_index[idx] * N:(potentialAPs_index[idx] + 1) * N, :, relevantUEs_index[jdx]]
+                B_small[:, :, idx, jdx] = B[:, :, potentialAPs_index[idx], relevantUEs_index[jdx]]
+                C_small[:, :, idx, jdx] = C[:, :, potentialAPs_index[idx], relevantUEs_index[jdx]]
+                gainOverNoisedB_small[idx, jdx] = gainOverNoisedB[potentialAPs_index[idx], relevantUEs_index[jdx]]
+
+        # Store all the sum-SE values
+        sum_SEs = np.zeros((len(feasible_APassignments)))
+
+        # Try each AP assignment:
+        for idx, APassignment in enumerate(feasible_APassignments):
+
+            D_small[:, -1] = APassignment
+
+            # Compute SE for centralized and distributed uplink operations for the case when all APs serve all the UEs
+            SE_MMSE, SE_P_RZF, SE_MR, SE_P_MMSE = functionComputeSE_uplink(Hhat_small, H_small, D_small,
+                                                                           C_small, tau_c, tau_p,
+                                                                           nbrOfRealizations, N,
+                                                                           K_small, M, p)
+
+            match comb_mode:
+                case 'MMSE':
+                    SE = SE_MMSE
+                case 'P_RZF':
+                    SE = SE_P_RZF
+                case 'MR':
+                    SE = SE_MR
+                case 'P_MMSE':
+                    SE = SE_P_MMSE
+                case _:
+                    print('ERROR: Combining mismatching')
+                    SE = 0
+
+            sum_SE = np.sum(SE)
+
+            sum_SEs[idx] = sum_SE
+
+        # Get the best AP assignment (small)
+        bestAPassignment_index = np.argmax(sum_SEs)
+        best_APassignment = feasible_APassignments[bestAPassignment_index]
+
+        # store in the buffer the sample with the following structure (gainOverNoisedB_small, best_APassignment)
+        buffer.add((gainOverNoisedB_small, best_APassignment))
+
+
+    return buffer

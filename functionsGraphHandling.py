@@ -3,6 +3,8 @@ from collections import deque
 import random
 import numpy as np
 import pickle
+import dgl
+from dgl.data import DGLDataset
 
 
 class SampleBuffer(object):
@@ -26,6 +28,63 @@ class SampleBuffer(object):
         # Load using pickle
         with open(filename, 'rb') as f:
             self.storage = pickle.load(f)
+
+
+# Step 1: Create a custom dataset class
+class MyGraphDataset(DGLDataset):
+
+    def __init__(self):
+        super().__init__(name='my_graph_dataset')
+        self.graphs = []
+        self.labels = []
+
+    def buffers2dataset(self, buffers):
+        # run over the buffers in the list
+        for buffer in buffers:
+            # run over the elements in the buffer
+            for sample in buffer.storage:
+                # convert the matrix of channel gains to a graph
+                graph = get_star_graph(sample[0].T)
+                # Store the AP assignment as a tensor-like label for the graph
+                label = th.tensor(sample[1])
+                # Append the graph and its label to the dataset
+                self.graphs.append(graph)
+                self.labels.append(label)
+
+    def __getitem__(self, idx):
+        # Return the graph and its label
+        return self.graphs[idx], self.labels[idx]
+
+    def __len__(self):
+        # Return the total number of graphs
+        return len(self.graphs)
+        return len(self.graphs)
+
+
+def get_star_graph(featuresMatrix):
+    ''''
+    This function takes the features matrix and returns the star graph.
+    The features matrix is a tensor of size (N, M) where N is the number of nodes (same as the number of relevant UEs)
+    and M is the number of features (same as the number of potential APs).
+    The star graph is a DGL graph with N nodes and N-1 edges.
+    '''
+
+    # bring the last row of the feature matrix to the first row
+    featuresMatrix = np.roll(featuresMatrix, 1, axis=0)
+
+    N = featuresMatrix.shape[0]
+
+    # Create the star graph
+    G = dgl.DGLGraph()
+    G.add_nodes(N)
+    G.add_edges(th.tensor(range(1, N)), 0)
+
+    # Assign the features to the nodes
+    G.ndata['feat'] = th.tensor(featuresMatrix, dtype=th.cfloat)
+
+    return G
+
+
 
 
 
