@@ -45,10 +45,25 @@
                     -The samples are composed of a target UE and the I UEs which are relevant for the M APs relevant
                     for the target UE. For every UE we get a vector of features comprising the channel gains to the 
                     M APs.
+
+    # 20241127:
+        # Added:
+            # Include the functions generateSetup_UnbalancedUE() in functionsSetup.py to create setups where the 
+            distribution of the UEs within the area is unbalanced.
+            # Include new functions in the script functionsGraphHandling.py:
+                    -Include MyGraphDataset() class to create a pytorch dataset from the sample buffers created during
+                    sample generation.
+                    -Include get_star_graph() function that convert a sample into star graph with a feature matrix and 
+                    an edge list.
+            # Include the script AP_SampleGenerating_unbalancedSetup.py to test setups with unbalanced UE distribution.
+
         # To do:
-        # Work on the script for generating samples for training the GNNs (Done).
-        # Create a new script for generating training samples that considers only the AP assignment (Done).
-        # Implement the methods for creating and training the GNNs.
+        # Work on the script for generating samples for training the GNNs (Done in 20241125).
+        # Implement the methods for creating and training the GNNs (Incomplete in 20241127).
+
+        # Key issues:
+        # The AP assignment problem only makes sense when considering MR combining. For the case of MMSE and P-RZF 
+        combining, the best thing that can be done to improve sum-rate is to serve all UEs with all APs.
 
 
  

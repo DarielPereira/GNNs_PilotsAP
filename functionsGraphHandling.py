@@ -3,8 +3,8 @@ from collections import deque
 import random
 import numpy as np
 import pickle
-import dgl
-from dgl.data import DGLDataset
+import torch
+from torch_geometric.data import InMemoryDataset, Data, DataLoader
 
 
 class SampleBuffer(object):
@@ -31,12 +31,11 @@ class SampleBuffer(object):
 
 
 # Step 1: Create a custom dataset class
-class MyGraphDataset(DGLDataset):
+class MyGraphDataset(InMemoryDataset):
 
-    def __init__(self):
-        super().__init__(name='my_graph_dataset')
+    def __init__(self, root):
         self.graphs = []
-        self.labels = []
+        super().__init__(root)
 
     def buffers2dataset(self, buffers):
         # run over the buffers in the list
@@ -44,24 +43,25 @@ class MyGraphDataset(DGLDataset):
             # run over the elements in the buffer
             for sample in buffer.storage:
                 # convert the matrix of channel gains to a graph
-                graph = get_star_graph(sample[0].T)
-                # Store the AP assignment as a tensor-like label for the graph
-                label = th.tensor(sample[1])
+                graph = get_star_graph(sample[0].T, sample[1])
                 # Append the graph and its label to the dataset
                 self.graphs.append(graph)
-                self.labels.append(label)
 
-    def __getitem__(self, idx):
-        # Return the graph and its label
-        return self.graphs[idx], self.labels[idx]
+    @property
+    def processed_file_names(self):
+        return ['data.pt']
 
-    def __len__(self):
-        # Return the total number of graphs
-        return len(self.graphs)
+    def len(self):
         return len(self.graphs)
 
+    def get(self, idx):
+        """
+        Retrieve a graph by index.
+        """
+        return self.graphs[idx]
 
-def get_star_graph(featuresMatrix):
+
+def get_star_graph(channelGain_matrix, AP_assignment):
     ''''
     This function takes the features matrix and returns the star graph.
     The features matrix is a tensor of size (N, M) where N is the number of nodes (same as the number of relevant UEs)
@@ -70,22 +70,12 @@ def get_star_graph(featuresMatrix):
     '''
 
     # bring the last row of the feature matrix to the first row
-    featuresMatrix = np.roll(featuresMatrix, 1, axis=0)
+    featuresMatrix = th.tensor(np.roll(channelGain_matrix, 1, axis=0), dtype=th.cfloat)
 
     N = featuresMatrix.shape[0]
+    edge_list = th.stack((th.tensor(range(1, N)), th.zeros((N-1))))
 
-    # Create the star graph
-    G = dgl.DGLGraph()
-    G.add_nodes(N)
-    G.add_edges(th.tensor(range(1, N)), 0)
-
-    # Assign the features to the nodes
-    G.ndata['feat'] = th.tensor(featuresMatrix, dtype=th.cfloat)
-
-    return G
-
-
-
+    return Data(x=featuresMatrix, edge_index=edge_list, y=th.tensor(AP_assignment))
 
 
 def get_AP2UE_edges(D):
@@ -114,6 +104,7 @@ def get_Pilot2UE_edges(pilotIndex):
         Pilot2UE_edges[idx, 1] = idx
 
     return Pilot2UE_edges
+
 
 def get_oneHot_bestPilot(best_pilot_sample, tau_p):
     ''''

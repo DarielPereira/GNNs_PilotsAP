@@ -97,8 +97,10 @@ def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, nbrOfRealizations, N, 
                     Hallj_active[l*N:(l+1)*N, :] = H[servingAPs[l]*N:(servingAPs[l]+1)*N, n, :].reshape(N, K)
                     Hhatallj_active[l * N:(l + 1) * N, :] = Hhat[servingAPs[l] * N:(servingAPs[l] + 1) * N, n, :].reshape(N, K)
                     C_tot_blk[l * N: (l+1) * N, l * N: (l+1) * N] = np.sum(C[:, :, servingAPs[l], :], 2)
-                    C_tot_blk_partial[l * N: (l + 1) * N, l * N: (l + 1) * N] = np.sum(C[:, :, servingAPs[l], servedUEs], 2)
-
+                    # # Use this when working with global CSI and knowledge about the AP assignment of some UEs
+                    # C_tot_blk_partial[l * N: (l + 1) * N, l * N: (l + 1) * N] = np.sum(C[:, :, servingAPs[l], servedUEs], 2)
+                    # Use this when working with local CSI and no knowledge about the AP assignment of the UEs
+                    C_tot_blk_partial[l * N: (l + 1) * N, l * N: (l + 1) * N] = np.sum(C[:, :, servingAPs[l], :], 2)
 
                 # Compute MMSE combining according to 5.11
                 v = p * (alg.inv(p * (Hhatallj_active @ Hhatallj_active.conjugate().T) +
@@ -114,10 +116,15 @@ def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, nbrOfRealizations, N, 
                 SE_MMSE[k] = SE_MMSE[k] + prelogFactor * (np.log2(1 + numerator / denominator)).real / nbrOfRealizations
 
 
-
                 # Compute P-RZF combining according to 5.18
+                # # Use this when working with global CSI and knowledge about the AP assignment of some UEs
+                # v = p * (alg.inv(
+                #     p * (Hhatallj_active[:, servedUEs] @ Hhatallj_active[:, servedUEs].conjugate().T) + np.identity(
+                #         La * N)) @ Hhatallj_active[:, k])
+
+                # Use this when working with local CSI and no knowledge about the AP assignment of the UEs
                 v = p * (alg.inv(
-                    p * (Hhatallj_active[:, servedUEs] @ Hhatallj_active[:, servedUEs].conjugate().T) + np.identity(
+                    p * (Hhatallj_active @ Hhatallj_active.conjugate().T) + np.identity(
                         La * N)) @ Hhatallj_active[:, k])
 
                 # Compute numerator and denominator of instantaneous SINR in 5.5
@@ -125,10 +132,6 @@ def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, nbrOfRealizations, N, 
                 denominator = p * alg.norm(v.conjugate().T @ Hhatallj_active) ** 2 + v.conjugate().T @ (
                         p * C_tot_blk + np.identity(La * N)) @ v - numerator
 
-                # Compute numerator and denominator of instantaneous SINR in 5.50
-                numerator_gen = p * np.abs(v.conjugate().T @ Hallj_active[:, k]) ** 2
-                denominator_gen = p * alg.norm(
-                    v.conjugate().T @ Hallj_active) ** 2 + v.conjugate().T @ v - numerator_gen
 
                 # Update the SE by computing the instantaneous reward for one channel realization
                 # according to 5.4
@@ -150,10 +153,13 @@ def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, nbrOfRealizations, N, 
                     np.log2(1 + numerator / denominator)).real / nbrOfRealizations
 
 
-
-
                 # Compute P-MMSE combining according 5.16
-                v = p * (alg.inv(p * (Hhatallj_active[:, servedUEs] @ Hhatallj_active[:, servedUEs].conjugate().T) +
+                # # Use this when working with global CSI and knowledge about the AP assignment of some UEs
+                # v = p * (alg.inv(p * (Hhatallj_active[:, servedUEs] @ Hhatallj_active[:, servedUEs].conjugate().T) +
+                #                  p * C_tot_blk_partial + np.identity(La * N)) @ Hhatallj_active[:, k])
+
+                # Use this when working with local CSI and no knowledge about the AP assignment of the UEs
+                v = p * (alg.inv(p * (Hhatallj_active @ Hhatallj_active.conjugate().T) +
                                  p * C_tot_blk_partial + np.identity(La * N)) @ Hhatallj_active[:, k])
 
                 # Compute numerator and denominator of instantaneous SINR in 5.5
@@ -161,10 +167,6 @@ def functionComputeSE_uplink(Hhat, H, D, C, tau_c, tau_p, nbrOfRealizations, N, 
                 denominator = p * alg.norm(v.conjugate().T @ Hhatallj_active) ** 2 + v.conjugate().T @ (
                         p * C_tot_blk + np.identity(La * N)) @ v - numerator
 
-                # Compute numerator and denominator of instantaneous SINR in 5.50
-                numerator_gen = p * np.abs(v.conjugate().T @ Hallj_active[:, k]) ** 2
-                denominator_gen = p * alg.norm(
-                    v.conjugate().T @ Hallj_active) ** 2 + v.conjugate().T @ v - numerator_gen
 
                 # Update the SE by computing the instantaneous reward for one channel realization
                 # according to 5.4
