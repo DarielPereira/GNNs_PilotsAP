@@ -13,7 +13,7 @@ from functionsChannelEstimates import channelEstimates
 
 ##Setting Parameters
 configuration = {
-    'nbrOfSetups': 1000,             # number of communication network setups
+    'nbrOfSetups': 1,             # number of communication network setups
     'nbrOfConnectedUEs_range': [1, 150],            # number of UEs to insert
     'nbrOfRealizations': 5,      # number of channel realizations per sample
     'L': 225,                     # number of APs
@@ -79,7 +79,7 @@ for setup_iter in range(nbrOfSetups):
                    comb_mode, potentialAPs_mode, relevantUEs_mode)
 
 file_name = (
-f'./AP_TRAININGDATA/SE_Comb_'
+f'./AP_TRAININGDATA/newData/SE_Comb_'
 +comb_mode+f'_L_{L}_N_{N}_M_{M}_I_{I}_taup_{tau_p}_NbrSamp_{len(sampleBuffer.storage)}.pkl')
 
 sampleBuffer.save(file_name)

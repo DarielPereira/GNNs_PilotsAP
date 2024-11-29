@@ -57,9 +57,15 @@
                     an edge list.
             # Include the script AP_SampleGenerating_unbalancedSetup.py to test setups with unbalanced UE distribution.
 
+    # 20241129:
+        # Added:
+            # The scripts functionsGraphHandling.py and AP_training.py were updated to include some elements for the 
+            training of the GNNs.
+                - Training should be revised because the loss is not decreasing.
+
         # To do:
         # Work on the script for generating samples for training the GNNs (Done in 20241125).
-        # Implement the methods for creating and training the GNNs (Incomplete in 20241127).
+        # Implement the methods for creating and training the GNNs (To be revised).
 
         # Key issues:
         # The AP assignment problem only makes sense when considering MR combining. For the case of MMSE and P-RZF 

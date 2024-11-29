@@ -3,8 +3,29 @@ from collections import deque
 import random
 import numpy as np
 import pickle
-import torch
+# import torch
 from torch_geometric.data import InMemoryDataset, Data, DataLoader
+from torch_geometric.nn import GCNConv
+import torch.nn.functional as F
+
+
+class SingleLayerGNN(th.nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.conv = GCNConv(in_channels, out_channels)
+        self.linear = th.nn.Linear(in_channels + out_channels, out_channels)
+
+    def forward(self, x, edge_index):
+        x = x.to(th.float)
+        edge_index = edge_index.to(th.int64)
+
+        # Apply GNN to the subgraph
+        embedding = F.relu(th.cat((x[0], self.conv(x, edge_index)[0]), dim=0))
+
+        # Get the AP assignment prediction
+        predicted_AP_assignment = self.linear(embedding)
+
+        return predicted_AP_assignment
 
 
 class SampleBuffer(object):
@@ -30,14 +51,14 @@ class SampleBuffer(object):
             self.storage = pickle.load(f)
 
 
-# Step 1: Create a custom dataset class
+# Create a custom dataset class
 class MyGraphDataset(InMemoryDataset):
 
-    def __init__(self, root):
-        self.graphs = []
+    def __init__(self, root, graphs = list([])):
+        self.graphs = graphs
         super().__init__(root)
 
-    def buffers2dataset(self, buffers):
+    def buffers2dataset(self, buffers, filepath):
         # run over the buffers in the list
         for buffer in buffers:
             # run over the elements in the buffer
@@ -46,6 +67,7 @@ class MyGraphDataset(InMemoryDataset):
                 graph = get_star_graph(sample[0].T, sample[1])
                 # Append the graph and its label to the dataset
                 self.graphs.append(graph)
+        th.save(self.graphs, filepath+'/AP_training_Dataset.pt')
 
     @property
     def processed_file_names(self):
