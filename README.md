@@ -71,6 +71,8 @@
         # The AP assignment problem only makes sense when considering MR combining. For the case of MMSE and P-RZF 
         combining, the best thing that can be done to improve sum-rate is to serve all UEs with all APs.
 
+    # Note_Commit:
+        - Check that the dimensions of edge lists are right. The right dimensions are (2, num_edges) and not (num_edges, 2).
 
  
 
