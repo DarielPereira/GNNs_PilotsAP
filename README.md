@@ -63,8 +63,17 @@
             training of the GNNs.
                 - Training should be revised because the loss is not decreasing.
 
+    # 20250108:
+        # Added:
+            # Include the scripts ..._heuristics that implement the heuristic methods for the AP cooperation cluster 
+            formation (ALL, BCC, M-best, Graph).
+            # The scripts APassignment_heuristics_CDF.py and APassignment_heuristics_K.py generate the data for the 
+            graphs in VTC25 conference paper.
+            # The folder GRAPHS_heuristics contains the graphs for the VTC25 conference paper.
+
         # To do:
-        # Work on the script for generating samples for training the GNNs (Done in 20241125).
+        # Revise all the scripts starting with _ to adjust to the changes introduced in the scripts ending with 
+        _heuristics.
         # Implement the methods for creating and training the GNNs (To be revised).
 
         # Key issues:

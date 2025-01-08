@@ -1,7 +1,7 @@
 import os
 import torch as th
 import glob
-from functionsGraphHandling import SampleBuffer, MyGraphDataset, SingleLayerGNN
+from _functionsGraphHandling import SampleBuffer, MyGraphDataset, SingleLayerGNN
 import torch.utils.data as th_data
 from torch_geometric.loader import DataLoader
 
