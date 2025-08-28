@@ -1,3 +1,7 @@
+""""
+This script generates a random setup for a cell-free massive MIMO network.
+"""
+
 import numpy as np
 import numpy.linalg as alg
 import math

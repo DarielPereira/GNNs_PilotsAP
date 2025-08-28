@@ -1,3 +1,7 @@
+"""
+Script to train a GNN model using graph data stored in AP_TrainingData.
+"""
+
 import os
 import torch as th
 import glob

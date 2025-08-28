@@ -1,3 +1,7 @@
+"""
+This function is used to generate the channel realizations and the channel estimates for a cell-free massive MIMO system.
+"""
+
 import numpy
 import numpy as np
 import numpy.linalg as alg

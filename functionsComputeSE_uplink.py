@@ -1,3 +1,7 @@
+"""
+This function computes the uplink SE for different receive combining schemes
+"""
+
 import numpy as np
 import numpy.linalg as alg
 import sympy as sp

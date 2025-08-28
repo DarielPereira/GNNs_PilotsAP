@@ -1,3 +1,9 @@
+"""
+This code simulates a cell-free massive MIMO network and evaluates different heuristic methods for AP-UE association.
+Performance data is stored so it can be used for creating graphs of SE (Spectral Efficiency) vs the number of UEs (K).
+"""
+
+
 import math
 import numpy as np
 from nbclient.client import timestamp

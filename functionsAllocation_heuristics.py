@@ -1,3 +1,9 @@
+"""
+This function implements the function that calls the different AP assignment schemes, including the GNN-based one.
+It contains also the pilot assignment function.
+"""
+
+
 import numpy as np
 import itertools
 from functionsUtils import db2pow

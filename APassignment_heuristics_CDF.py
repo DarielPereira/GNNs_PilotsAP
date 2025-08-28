@@ -1,3 +1,8 @@
+"""
+This code simulates a cell-free massive MIMO network and evaluates different heuristic methods for AP-UE association.
+Performance data is stored so it can be used for creating CDF graphs of the SE (Spectral Efficiency).
+"""
+
 import math
 import numpy as np
 from nbclient.client import timestamp

@@ -1,3 +1,7 @@
+"""
+This file contains the functions for handling graphs and the GNN model.
+"""
+
 import torch as th
 from collections import deque
 import random
