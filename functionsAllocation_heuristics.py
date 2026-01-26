@@ -92,6 +92,7 @@ def APassignment(nbrOfRealizations, R, gainOverNoisedB, Hhat, H, B, C, p, tau_c,
             D = np.ones((L, K))
 
         case 'Graph':
+            # Using provisional method!!
 
             # Compute the feasible AP assignments
             feasible_APassignments = np.array(list(itertools.product([0, 1], repeat=I)))
