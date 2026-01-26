@@ -5,7 +5,7 @@ This script generates samples for training the GNN-based models by considering c
 import math
 import random
 
-from __Unused.functionsAllocation import PilotAssignment, AP_GeneratingSamples
+from functionsAllocation import PilotAssignment, AP_GeneratingSamples
 from functionsSetup_heuristics import generateSetup
 from _functionsGraphHandling import SampleBuffer
 from functionsChannelEstimates import channelEstimates

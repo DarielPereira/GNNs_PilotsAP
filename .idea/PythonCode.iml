@@ -5,8 +5,9 @@
       <excludeFolder url="file://$MODULE_DIR$/TESTs" />
       <excludeFolder url="file://$MODULE_DIR$/ToyModelsData" />
       <excludeFolder url="file://$MODULE_DIR$/__Unused" />
+      <excludeFolder url="file://$MODULE_DIR$/GRAPHS_heuristics/VARIABLES_SAVED" />
     </content>
-    <orderEntry type="jdk" jdkName="PythonCodes" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python Codes" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">
