@@ -145,7 +145,6 @@ different network configurations.
         # Added:
             # Include the scripts ..._heuristics that implement the heuristic methods for the AP cooperation cluster 
             formation (ALL, BCC, M-best, Graph).
-            # The folder GRAPHS_heuristics contains the graphs for the VTC25 conference paper.
 
         # To do:
         # Revise all the scripts starting with _ to adjust to the changes introduced in the scripts ending with 
