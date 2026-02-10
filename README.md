@@ -145,8 +145,6 @@ different network configurations.
         # Added:
             # Include the scripts ..._heuristics that implement the heuristic methods for the AP cooperation cluster 
             formation (ALL, BCC, M-best, Graph).
-            # The scripts APassignment_heuristics_CDF.py and APassignment_heuristics_K.py generate the data for the 
-            graphs in VTC25 conference paper.
             # The folder GRAPHS_heuristics contains the graphs for the VTC25 conference paper.
 
         # To do:
